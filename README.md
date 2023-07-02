@@ -1,5 +1,7 @@
 # pixelgame
 
+2d rotationally symmetric square Moore neighborhood 2-state cellular automata rule battle royale
+
 ## manual local PostgreSQL dev setup
 
 See `config/dev.exs` for username, password, dbname.
