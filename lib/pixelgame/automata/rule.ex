@@ -2,9 +2,10 @@ defmodule Pixelgame.Automata.Rule do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @primary_key {:id, :string, []}
+  @derive {Phoenix.Param, key: :id}
   schema "rules" do
     field :name, :string
-    field :number, :decimal
     field :rating, :integer
 
     timestamps(inserted_at: :created_at)
