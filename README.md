@@ -1,32 +1,46 @@
 # pixelgame
 
-## manual local PostgreSQL dev setup
+## Dev
 
-See `config/dev.exs` for username, password, dbname.
+- `source .env.dev`
+- `mix setup`
+- `mix phx.server` or `iex -S mix phx.server`
+
+### Browserslist: caniuse-lite is outdated.
+
+- Update Tailwind version in config/config.exs
+- `mix tailwind.install`
+
+### Local PostgreSQL Setup
+
+See `config/dev.exs` for username, password, dbname. It should just work but see below in case.
+
+Set postgres user password in case it changed
 
 ```sh
-$ sudo -u postgres createuser <username>
-$ sudo -u postgres createdb <dbname>
-
-$ sudo -u postgres psql
-
-psql=# alter user <username> with encrypted password '<password>';
-psql=# grant all privileges on database <dbname> to <username> ;
+sudo -u postgres psql
+\password postgres
 ```
 
-To start your Phoenix server:
+If you want to setup a different user
 
-- Run `mix setup` to install and setup dependencies
-- Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+```sh
+sudo -u postgres createuser <username>
+sudo -u postgres createdb <dbname>
+sudo -u postgres psql
+```
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+```sql
+alter user <username> with encrypted password '<password>';
+grant all privileges on database <dbname> to <username> ;
+```
 
-Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+## Resources
 
-## Learn more
+Stuff I blatantly stole from
 
-- Official website: https://www.phoenixframework.org/
-- Guides: https://hexdocs.pm/phoenix/overview.html
-- Docs: https://hexdocs.pm/phoenix
-- Forum: https://elixirforum.com/c/phoenix-forum
-- Source: https://github.com/phoenixframework/phoenix
+https://github.com/fly-apps/live_beats
+
+https://softwaremill.com/phoenix-with-github-oauth-authentication
+
+https://github.com/fly-apps/tictac

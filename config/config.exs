@@ -7,6 +7,15 @@
 # General application configuration
 import Config
 
+config :ueberauth, Ueberauth,
+  providers: [
+    github: {Ueberauth.Strategy.Github, [default_scope: "user:email"]}
+  ]
+
+config :ueberauth, Ueberauth.Strategy.Github.OAuth,
+  client_id: System.get_env("GITHUB_CLIENT_ID"),
+  client_secret: System.get_env("GITHUB_CLIENT_SECRET")
+
 config :pixelgame,
   ecto_repos: [Pixelgame.Repo]
 
@@ -41,7 +50,7 @@ config :esbuild,
 
 # Configure tailwind (the version is required)
 config :tailwind,
-  version: "3.2.7",
+  version: "3.3.5",
   default: [
     args: ~w(
       --config=tailwind.config.js

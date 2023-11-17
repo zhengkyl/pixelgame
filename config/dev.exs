@@ -2,8 +2,8 @@ import Config
 
 # Configure your database
 config :pixelgame, Pixelgame.Repo,
-  username: "pixelgame",
-  password: "pixelgame",
+  username: "postgres",
+  password: "postgres",
   hostname: "localhost",
   database: "pixelgame_dev",
   stacktrace: true,
