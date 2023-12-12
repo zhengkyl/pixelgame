@@ -1,5 +1,11 @@
 # pixelgame
 
+For now, a blatant copy of the below.
+
+https://github.com/fly-apps/tictac
+
+https://softwaremill.com/phoenix-with-github-oauth-authentication
+
 ## Dev
 
 - `source .env.dev`
@@ -34,13 +40,3 @@ sudo -u postgres psql
 alter user <username> with encrypted password '<password>';
 grant all privileges on database <dbname> to <username> ;
 ```
-
-## Resources
-
-Stuff I blatantly stole from
-
-https://github.com/fly-apps/live_beats
-
-https://softwaremill.com/phoenix-with-github-oauth-authentication
-
-https://github.com/fly-apps/tictac

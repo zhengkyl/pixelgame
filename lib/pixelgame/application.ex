@@ -17,9 +17,9 @@ defmodule Pixelgame.Application do
       # Start Finch
       {Finch, name: Pixelgame.Finch},
       # Start the Endpoint (http/https)
+      {Registry, keys: :unique, name: Pixelgame.GameRegistry},
+      {DynamicSupervisor, strategy: :one_for_one, name: Pixelgame.GameSupervisor},
       PixelgameWeb.Endpoint
-      # Start a worker by calling: Pixelgame.Worker.start_link(arg)
-      # {Pixelgame.Worker, arg}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
