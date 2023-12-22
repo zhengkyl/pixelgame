@@ -6,7 +6,7 @@ defmodule Pixelgame.Games.Server do
   alias Pixelgame.Games.TicTacToe
   alias __MODULE__
 
-  alias Pixelgame.Accounts.User
+  alias Pixelgame.Games.Player
 
   # https://hexdocs.pm/elixir/1.12/Supervisor.html#module-child-specification
   def child_spec(opts) do
@@ -31,7 +31,7 @@ defmodule Pixelgame.Games.Server do
     end
   end
 
-  def start_or_join(code, %User{} = player) do
+  def start_or_join(code, %Player{} = player) do
     case DynamicSupervisor.start_child(
            Pixelgame.GameSupervisor,
            {Server, [name: code, player: player]}
@@ -43,11 +43,12 @@ defmodule Pixelgame.Games.Server do
       :ignore ->
         Logger.info("JOINING existing game server #{inspect(code)}")
         nil
-    end
-  end
 
-  def join_game(code, %User{} = player) do
-    GenServer.call(via_tuple(code), {:join_game, player})
+        case GenServer.call(via_tuple(code), {:join_game, player}) do
+          :ok -> {:ok, :joined}
+          {:error, _reason} = error -> error
+        end
+    end
   end
 
   ###
@@ -58,14 +59,40 @@ defmodule Pixelgame.Games.Server do
     {:ok, TicTacToe.new(code, player)}
   end
 
-  def handle_cast(:join_game, %User{} = player, %TicTacToe{} = state) do
-    with {:ok, state} <- TicTacToe.join_game(state, player),
-         {:ok, state} <- TicTacToe.start_game(state) do
+  def handle_call({:join_game, %Player{} = player}, _from, %TicTacToe{} = state) do
+    with {:ok, state} <- TicTacToe.join(state, player) do
       broadcast_game_state(state)
       {:reply, :ok, state}
     else
       {:error, reason} = error ->
-        Logger.error("Failed to join and start game_#{state.code}: #{inspect(reason)}")
+        Logger.error("Failed to join game_#{state.code}: #{inspect(reason)}")
+        {:reply, error, state}
+    end
+  end
+
+  def handle_call({:ready, player_id}, _from, %TicTacToe{} = state) do
+    with {:ok, player} <- TicTacToe.find_player(state, player_id),
+         {:ok, state} <- TicTacToe.ready(state, player) do
+      broadcast_game_state(state)
+      {:reply, :ok, state}
+    else
+      {:error, reason} = error ->
+        Logger.error(
+          "Fail to ready player: #{player_id} in game_#{state.code}: #{inspect(reason)}"
+        )
+
+        {:reply, error, state}
+    end
+  end
+
+  def handle_call({:move, player_id, square}, _from, %TicTacToe{} = state) do
+    with {:ok, player} <- TicTacToe.find_player(state, player_id),
+         {:ok, state} <- TicTacToe.move(state, player, square) do
+      broadcast_game_state(state)
+      {:reply, :ok, state}
+    else
+      {:error, reason} = error ->
+        Logger.error("Failed to move in game_#{state.code}: #{inspect(reason)}")
         {:reply, error, state}
     end
   end
