@@ -39,7 +39,18 @@ defmodule Pixelgame.Games.TicTacToe do
       board_size: board_size,
       win_length: win_length
     }
-    |> set_timer(@timeout_time)
+    |> reset_timer()
+  end
+
+  def restart(%TicTacToe{} = state) do
+    %TicTacToe{
+      state
+      | status: :waiting,
+        turn: 0,
+        players: Map.new(state.players, fn {id, p} -> {id, %Player{p | ready: false}} end),
+        pieces: Map.new(Map.keys(state.pieces), fn id -> {id, MapSet.new()} end)
+    }
+    |> reset_timer()
   end
 
   # Neat pattern matching use
@@ -53,15 +64,20 @@ defmodule Pixelgame.Games.TicTacToe do
       do: {:error, "Can't join EMPTY game"}
 
   def join(%TicTacToe{players: players, pieces: pieces} = state, %Player{} = new_player) do
-    index = map_size(players)
+    case Map.has_key?(players, new_player.user_id) do
+      true ->
+        {:error, "Player already joined."}
 
-    {:ok,
-     %TicTacToe{
-       state
-       | players: Map.put(players, new_player.user_id, %Player{new_player | order: index}),
-         pieces: Map.put(pieces, new_player.user_id, MapSet.new())
-     }
-     |> reset_timer()}
+      false ->
+        {:ok,
+         %TicTacToe{
+           state
+           | players:
+               Map.put(players, new_player.user_id, %Player{new_player | order: map_size(players)}),
+             pieces: Map.put(pieces, new_player.user_id, MapSet.new())
+         }
+         |> reset_timer()}
+    end
   end
 
   def ready(%TicTacToe{status: :waiting} = state, %Player{} = player) do
@@ -77,7 +93,10 @@ defmodule Pixelgame.Games.TicTacToe do
 
   def start(%TicTacToe{status: :waiting, players: players} = state)
       when map_size(players) >= state.min_players do
-    {:ok, state}
+    case Map.values(players) |> Enum.all?(fn player -> player.ready end) do
+      true -> {:ok, %TicTacToe{state | status: :playing}}
+      false -> {:error, "Not all players ready to start game"}
+    end
   end
 
   def start(%TicTacToe{status: status, players: players}),
@@ -146,7 +165,7 @@ defmodule Pixelgame.Games.TicTacToe do
     end)
   end
 
-  defp next_turn(%TicTacToe{status: :playing, turn: turn, board_size: board_size} = state) do
+  def next_turn(%TicTacToe{status: :playing, turn: turn, board_size: board_size} = state) do
     last_turn = board_size * board_size
 
     case turn do
@@ -155,7 +174,7 @@ defmodule Pixelgame.Games.TicTacToe do
     end
   end
 
-  defp next_turn(%TicTacToe{status: :done} = state), do: state
+  def next_turn(%TicTacToe{status: :done} = state), do: state
 
   def find_player(%TicTacToe{players: players}, player_id) do
     case Map.fetch(players, player_id) do
@@ -165,11 +184,11 @@ defmodule Pixelgame.Games.TicTacToe do
   end
 
   defp reset_timer(%TicTacToe{status: :playing} = state) do
-    state |> cancel_timer() |> set_timer(@turn_time)
+    state |> cancel_timer() |> set_timer(:end_turn, @turn_time)
   end
 
   defp reset_timer(%TicTacToe{} = state) do
-    state |> cancel_timer() |> set_timer(@timeout_time)
+    state |> cancel_timer() |> set_timer(:end_for_timeout, @timeout_time)
   end
 
   defp cancel_timer(%TicTacToe{timer_ref: ref} = state) when is_reference(ref) do
@@ -179,10 +198,10 @@ defmodule Pixelgame.Games.TicTacToe do
 
   defp cancel_timer(%TicTacToe{} = state), do: state
 
-  defp set_timer(%TicTacToe{} = state, time) do
+  defp set_timer(%TicTacToe{} = state, msg, time) do
     %TicTacToe{
       state
-      | timer_ref: Process.send_after(self(), :end_for_timeout, time)
+      | timer_ref: Process.send_after(self(), msg, time)
     }
   end
 end

@@ -31,24 +31,41 @@ defmodule Pixelgame.Games.Server do
     end
   end
 
-  def start_or_join(code, %Player{} = player) do
+  def create_or_join(code, %Player{} = player) do
     case DynamicSupervisor.start_child(
            Pixelgame.GameSupervisor,
            {Server, [name: code, player: player]}
          ) do
       {:ok, _pid} ->
-        Logger.info("STARTING game server #{inspect(code)}")
+        Logger.info("CREATING game server #{inspect(code)}")
         {:ok, :started}
 
       :ignore ->
         Logger.info("JOINING existing game server #{inspect(code)}")
         nil
 
+        # this only b/c need to differentiate started/joined
         case GenServer.call(via_tuple(code), {:join_game, player}) do
           :ok -> {:ok, :joined}
           {:error, _reason} = error -> error
         end
     end
+  end
+
+  def ready_player(code, player_id) do
+    GenServer.call(via_tuple(code), {:ready_player, player_id})
+  end
+
+  def start_game(code) do
+    GenServer.call(via_tuple(code), :start_game)
+  end
+
+  def restart_game(code) do
+    GenServer.call(via_tuple(code), :restart_game)
+  end
+
+  def make_move(code, player_id, move) do
+    GenServer.call(via_tuple(code), {:make_move, player_id, move})
   end
 
   ###
@@ -70,7 +87,7 @@ defmodule Pixelgame.Games.Server do
     end
   end
 
-  def handle_call({:ready, player_id}, _from, %TicTacToe{} = state) do
+  def handle_call({:ready_player, player_id}, _from, %TicTacToe{} = state) do
     with {:ok, player} <- TicTacToe.find_player(state, player_id),
          {:ok, state} <- TicTacToe.ready(state, player) do
       broadcast_game_state(state)
@@ -85,9 +102,20 @@ defmodule Pixelgame.Games.Server do
     end
   end
 
-  def handle_call({:move, player_id, square}, _from, %TicTacToe{} = state) do
+  def handle_call(:start_game, _from, %TicTacToe{} = state) do
+    with {:ok, state} <- TicTacToe.start(state) do
+      broadcast_game_state(state)
+      {:reply, :ok, state}
+    else
+      {:error, reason} = error ->
+        Logger.error("Fail to start game_#{state.code}: #{inspect(reason)}")
+        {:reply, error, state}
+    end
+  end
+
+  def handle_call({:make_move, player_id, move}, _from, %TicTacToe{} = state) do
     with {:ok, player} <- TicTacToe.find_player(state, player_id),
-         {:ok, state} <- TicTacToe.move(state, player, square) do
+         {:ok, state} <- TicTacToe.move(state, player, move) do
       broadcast_game_state(state)
       {:reply, :ok, state}
     else
@@ -95,6 +123,23 @@ defmodule Pixelgame.Games.Server do
         Logger.error("Failed to move in game_#{state.code}: #{inspect(reason)}")
         {:reply, error, state}
     end
+  end
+
+  def handle_call(:restart_game, _from, %TicTacToe{} = state) do
+    state = TicTacToe.restart(state)
+    broadcast_game_state(state)
+    {:reply, :ok, state}
+  end
+
+  def handle_info(:end_turn, %TicTacToe{} = state) do
+    state = TicTacToe.next_turn(state)
+    broadcast_game_state(state)
+    {:reply, :ok, state}
+  end
+
+  def handle_info(:end_for_timeout, %TicTacToe{} = state) do
+    Logger.info("game_#{state.code} ended due to timeout")
+    {:stop, :normal, state}
   end
 
   def broadcast_game_state(%TicTacToe{} = state) do

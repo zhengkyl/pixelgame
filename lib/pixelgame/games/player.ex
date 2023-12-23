@@ -21,6 +21,8 @@ defmodule Pixelgame.Games.Player do
 
   def create(attrs) do
     # apply_action checks validity via pretend insert
-    %Player{} |> changeset(attrs) |> apply_action(:insert)
+    test = %Player{} |> changeset(attrs) |> apply_action(:insert)
+    IO.inspect(test, label: "create player")
+    test
   end
 end
