@@ -31,7 +31,7 @@ defmodule Pixelgame.Games.Server do
     end
   end
 
-  def create_or_join(code, %Player{} = player) do
+  def create_game(code, %Player{} = player) do
     case DynamicSupervisor.start_child(
            Pixelgame.GameSupervisor,
            {Server, [name: code, player: player]}
@@ -41,15 +41,12 @@ defmodule Pixelgame.Games.Server do
         {:ok, :started}
 
       :ignore ->
-        Logger.info("JOINING existing game server #{inspect(code)}")
-        nil
-
-        # this only b/c need to differentiate started/joined
-        case GenServer.call(via_tuple(code), {:join_game, player}) do
-          :ok -> {:ok, :joined}
-          {:error, _reason} = error -> error
-        end
+        {:error, "Game code #{code} already in use"}
     end
+  end
+
+  def join_game(code, %Player{} = player) do
+    GenServer.call(via_tuple(code), {:join_game, player})
   end
 
   def ready_player(code, player_id) do

@@ -21,6 +21,7 @@ defmodule PixelgameWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    post "/", PageController, :create
   end
 
   scope "/auth", PixelgameWeb do

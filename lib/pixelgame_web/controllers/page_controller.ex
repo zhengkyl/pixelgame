@@ -2,8 +2,12 @@ defmodule PixelgameWeb.PageController do
   use PixelgameWeb, :controller
 
   def home(conn, _params) do
-    # The home page is often custom made,
-    # so skip the default app layout.
-    render(conn, :home, layout: false)
+    render(conn, :home, layout: false, values: %{"code" => ""})
+  end
+
+  def create(_conn, params) do
+    IO.inspect(params)
+    player = Pixelgame.Games.Player.create(%{name: "Bob", user_id: "123"})
+    Pixelgame.Games.Server.join_game(params.code, player)
   end
 end
