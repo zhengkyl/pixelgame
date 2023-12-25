@@ -204,6 +204,7 @@ defmodule PixelgameWeb.CoreComponents do
   """
   attr :type, :string, default: nil
   attr :class, :string, default: nil
+  attr :hue, :string, default: nil
   attr :rest, :global, include: ~w(disabled form name value)
 
   slot :inner_block, required: true
@@ -213,9 +214,11 @@ defmodule PixelgameWeb.CoreComponents do
     <button
       type={@type}
       class={[
-        "phx-submit-loading:opacity-75 rounded-lg bg-zinc-900 hover:bg-zinc-700 py-2 px-3",
+        "phx-submit-loading:opacity-75 rounded-lg py-2 px-3",
         "text-sm font-semibold leading-6 text-white active:text-white/80 border",
-        @class
+        @class,
+        (@hue != nil && "bg-#{@hue}-500 hover:bg-#{@hue}-400 border-#{@hue}-900") ||
+          "bg-zinc-800 hover:bg-zinc-700"
       ]}
       {@rest}
     >
@@ -232,6 +235,7 @@ defmodule PixelgameWeb.CoreComponents do
       <.link_button>Send!</.link_button>
   """
   attr :class, :string, default: nil
+  attr :hue, :string, default: nil
 
   attr :rest, :global,
     include:
@@ -243,9 +247,11 @@ defmodule PixelgameWeb.CoreComponents do
     ~H"""
     <.link
       class={[
-        "inline-flex justify-center phx-submit-loading:opacity-75 rounded-lg bg-zinc-900 hover:bg-zinc-700 py-2 px-3",
+        "inline-flex justify-center phx-submit-loading:opacity-75 rounded-lg py-2 px-3",
         "text-sm font-semibold leading-6 text-white active:text-white/80 border",
-        @class
+        @class,
+        (@hue != nil && "bg-#{@hue}-500 hover:bg-#{@hue}-400 border-#{@hue}-400") ||
+          "bg-zinc-800 hover:bg-zinc-700"
       ]}
       {@rest}
     >

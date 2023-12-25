@@ -7,8 +7,23 @@ const path = require("path");
 
 module.exports = {
   content: ["./js/**/*.js", "../lib/*_web.ex", "../lib/*_web/**/*.*ex"],
+  safelist: [
+    {
+      pattern: /bg-(green|sky|purple)-500/,
+    },
+    {
+      pattern: /border-(green|sky|purple)-400/,
+    },
+    {
+      pattern: /bg-(green|sky|purple)-400/,
+      variants: ["hover"],
+    },
+  ],
   theme: {
     extend: {
+      borderColor: {
+        DEFAULT: "#696969",
+      },
       colors: {
         brand: "#FAD63F",
       },

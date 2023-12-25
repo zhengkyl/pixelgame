@@ -25,7 +25,7 @@
       Tic-tac-toe implemented in 5000 lines of code
     </p>
     <div class="mt-4 flex flex-col gap-2 w-full xs:w-auto">
-      <.link_button href="/game">Create lobby</.link_button>
+      <.link_button href="/game" hue="purple">Create lobby</.link_button>
       <span class="text-center font-bold text-xl">or</span>
       <.form :let={form} for={@values} action={~p"/"} method="post" class="flex gap-2">
         <.input

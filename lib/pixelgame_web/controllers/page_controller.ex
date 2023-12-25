@@ -7,7 +7,7 @@ defmodule PixelgameWeb.PageController do
 
   def create(_conn, params) do
     IO.inspect(params)
-    player = Pixelgame.Games.Player.create(%{name: "Bob", user_id: "123"})
+    {:ok, player} = Pixelgame.Games.Player.create(%{name: "Bob", user_id: "123"})
     Pixelgame.Games.Server.join_game(params.code, player)
   end
 end

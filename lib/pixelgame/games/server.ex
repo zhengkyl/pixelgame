@@ -31,17 +31,17 @@ defmodule Pixelgame.Games.Server do
     end
   end
 
-  def create_game(code, %Player{} = player) do
-    case DynamicSupervisor.start_child(
-           Pixelgame.GameSupervisor,
-           {Server, [name: code, player: player]}
-         ) do
-      {:ok, _pid} ->
-        Logger.info("CREATING game server #{inspect(code)}")
-        {:ok, :started}
-
-      :ignore ->
-        {:error, "Game code #{code} already in use"}
+  def create_game(%Player{} = player) do
+    with {:ok, code} <- generate_code(),
+         {:ok, _pid} <-
+           DynamicSupervisor.start_child(
+             Pixelgame.GameSupervisor,
+             {Server, [name: code, player: player]}
+           ) do
+      Logger.info("CREATING game #{inspect(code)}")
+      {:ok, code}
+    else
+      {:error, reason} -> {:error, "FAILED creating game: #{reason}"}
     end
   end
 
@@ -154,9 +154,9 @@ defmodule Pixelgame.Games.Server do
     code = get_random_code()
 
     if server_exists?(code) do
-      {:ok, code}
-    else
       generate_code(tries + 1)
+    else
+      {:ok, code}
     end
   end
 
@@ -166,7 +166,7 @@ defmodule Pixelgame.Games.Server do
   end
 
   def server_exists?(code) do
-    case Registry.lookup(GameRegistry, code) do
+    case Registry.lookup(Pixelgame.GameRegistry, code) do
       [] -> false
       [{pid, _} | _] when is_pid(pid) -> true
     end
