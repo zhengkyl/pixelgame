@@ -1,9 +1,10 @@
 // https://fly.io/phoenix-files/saving-and-restoring-liveview-state/
 
-export const LocalStateStore = {
+export const GameCodeStore = {
   mounted() {
     this.handleEvent("store", (obj) => {
       console.log("store", obj);
+      window.history.replaceState(null, "", "game");
       sessionStorage.setItem(obj.key, obj.data);
     });
     this.handleEvent("restore", (obj) => {

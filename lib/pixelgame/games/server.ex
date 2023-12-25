@@ -46,6 +46,7 @@ defmodule Pixelgame.Games.Server do
   end
 
   def join_game(code, %Player{} = player) do
+    # TODO check valid code
     GenServer.call(via_tuple(code), {:join_game, player})
   end
 
