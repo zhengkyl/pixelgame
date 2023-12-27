@@ -46,7 +46,6 @@ defmodule Pixelgame.Games.Server do
   end
 
   def join_game(code, %Player{} = player) do
-    # TODO check valid code
     GenServer.call(via_tuple(code), {:join_game, player})
   end
 
@@ -75,10 +74,15 @@ defmodule Pixelgame.Games.Server do
   end
 
   def handle_call({:join_game, %Player{} = player}, _from, %TicTacToe{} = state) do
-    with {:ok, state} <- TicTacToe.join(state, player) do
-      broadcast_game_state(state)
-      {:reply, :ok, state}
-    else
+    case TicTacToe.join(state, player) do
+      # player already joined, no updated state
+      :ok ->
+        {:reply, :ok, state}
+
+      {:ok, state} ->
+        broadcast_game_state(state)
+        {:reply, :ok, state}
+
       {:error, reason} = error ->
         Logger.error("Failed to join game_#{state.code}: #{inspect(reason)}")
         {:reply, error, state}
@@ -164,6 +168,13 @@ defmodule Pixelgame.Games.Server do
   defp get_random_code() do
     range = ?A..?Z
     1..4 |> Enum.map(fn _ -> Enum.random(range) end) |> List.to_string()
+  end
+
+  def ensure_server_exists(code) do
+    case server_exists?(code) do
+      false -> {:error, "#{code} is not a valid code."}
+      true -> :ok
+    end
   end
 
   def server_exists?(code) do

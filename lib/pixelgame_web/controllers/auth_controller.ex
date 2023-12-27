@@ -13,16 +13,13 @@ defmodule PixelgameWeb.AuthController do
     # This is signin and signup
     case Accounts.signin_via_github(auth.info.email, auth.info, auth.credentials.token) do
       {:ok, user} ->
-        IO.inspect(user, label: "user path")
-
         conn
-        |> put_flash(:info, "Success")
+        |> put_flash(:info, "Successfully authenticated")
         |> put_session(:user_id, user.id)
         |> UserAuth.log_in_user(user)
 
-      {:error, changeset} ->
-        IO.inspect(changeset, label: "error path")
-        conn |> put_flash(:error, "Error") |> redirect(to: "/")
+      {:error, _changeset} ->
+        conn |> put_flash(:error, "Failed to authenticate") |> redirect(to: "/")
     end
   end
 

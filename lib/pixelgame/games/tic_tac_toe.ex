@@ -66,7 +66,7 @@ defmodule Pixelgame.Games.TicTacToe do
   def join(%TicTacToe{players: players, pieces: pieces} = state, %Player{} = new_player) do
     case Map.has_key?(players, new_player.user_id) do
       true ->
-        {:error, "Player already joined."}
+        :ok
 
       false ->
         {:ok,

@@ -1,5 +1,5 @@
 <.flash_group flash={@flash} />
-<div class="py-10 px-4 sm:px-8 lg:px-16">
+<div class="py-16 px-4 sm:px-8 lg:px-16">
   <div class="mx-auto max-w-xl">
     <div class="mt-10 flex justify-between">
       <h1 class="text-brand text-2xl font-bold">
@@ -33,6 +33,11 @@
           placeholder="Game code"
           class="font-bold flex-1"
           input_class="text-center"
+          required
+          minlength="4"
+          maxlength="4"
+          autocomplete="off"
+          phx-hook="CapitalizeInput"
         />
         <div class="flex-1">
           <.button class="w-full">Join</.button>

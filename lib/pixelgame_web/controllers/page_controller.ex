@@ -6,9 +6,10 @@ defmodule PixelgameWeb.PageController do
   end
 
   def create(conn, params) do
-    IO.inspect(params)
-    {:ok, player} = Pixelgame.Games.Player.create(%{name: "Bob", user_id: "123"})
-    Pixelgame.Games.Server.join_game(params["code"], player)
-    conn |> redirect(to: ~p"/game?code=#{params["code"]}")
+    case Pixelgame.Games.Server.server_exists?(params["code"]) do
+      false -> conn |> put_flash(:error, "Lobby does not exist") |> redirect(to: ~p"/")
+      # false -> conn |> put_flash(:error, "Lobby does not exist") |> redirect(to: ~p"/")
+      true -> conn |> redirect(to: ~p"/game?code=#{params["code"]}")
+    end
   end
 end
