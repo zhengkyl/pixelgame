@@ -6,7 +6,7 @@ defmodule Pixelgame.Games.Player do
 
   embedded_schema do
     field :name, :string
-    field :user_id, :string
+    field :user_id, :integer
     field :order, :integer
     field :color, :string
     field :ready, :boolean
@@ -14,7 +14,7 @@ defmodule Pixelgame.Games.Player do
 
   @type t :: %Player{
           name: String.t(),
-          user_id: String.t()
+          user_id: integer()
         }
 
   def changeset(player, attrs) do
@@ -24,9 +24,12 @@ defmodule Pixelgame.Games.Player do
     |> validate_format(:color, ~r/#[A-F\d]{6}/)
   end
 
-  @spec create(attrs :: map()) :: {:error, Ecto.Changeset.t()} | {:ok, t()}
+  # @spec create(attrs :: map()) :: {:error, Ecto.Changeset.t()} | {:ok, t()}
   def create(attrs) do
     # apply_action checks validity via pretend insert
-    %Player{} |> changeset(attrs) |> apply_action(:insert)
+    case %Player{} |> changeset(attrs) |> apply_action(:insert) do
+      {:error, _} -> {:error, "Invalid player info"}
+      player -> player
+    end
   end
 end

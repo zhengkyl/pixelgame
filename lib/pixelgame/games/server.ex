@@ -45,10 +45,15 @@ defmodule Pixelgame.Games.Server do
     end
   end
 
+  def get_state(code) do
+    GenServer.call(via_tuple(code), :get_state)
+  end
+
   def join_game(code, %Player{} = player) do
     GenServer.call(via_tuple(code), {:join_game, player})
   end
 
+  @spec ready_player(any(), any()) :: any()
   def ready_player(code, player_id) do
     GenServer.call(via_tuple(code), {:ready_player, player_id})
   end
@@ -71,6 +76,10 @@ defmodule Pixelgame.Games.Server do
 
   def init(%{code: code, player: player}) do
     {:ok, TicTacToe.new(code, player)}
+  end
+
+  def handle_call(:get_state, _from, state) do
+    {:reply, state, state}
   end
 
   def handle_call({:join_game, %Player{} = player}, _from, %TicTacToe{} = state) do
@@ -141,6 +150,10 @@ defmodule Pixelgame.Games.Server do
 
   def handle_info(:end_for_timeout, %TicTacToe{} = state) do
     Logger.info("game_#{state.code} ended due to timeout")
+
+    alias Phoenix.PubSub
+    PubSub.broadcast(Pixelgame.PubSub, "game:#{state.code}", :timeout)
+
     {:stop, :normal, state}
   end
 
