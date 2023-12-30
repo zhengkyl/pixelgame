@@ -5,10 +5,17 @@ defmodule PixelgameWeb.GameLive do
   use PixelgameWeb, :live_view
 
   def mount(_params, _session, socket) do
-    {:ok, socket |> assign(code: "****", game: nil)}
+    {:ok,
+     socket
+     |> assign(
+       client_info: %{code: "****", name: "Loading name...", user_id: "doesn't matter yet"},
+       game: %TicTacToe{},
+       settings: to_form(%{"board_size" => 3, "win_length" => 3, "preset" => "custom"})
+     )}
   end
 
   @salt Application.compile_env(:pixelgame, PixelgameWeb.Endpoint)[:live_view][:signing_salt]
+  @store_key "client_info"
 
   def handle_params(params, _uri, socket) do
     socket =
@@ -56,33 +63,49 @@ defmodule PixelgameWeb.GameLive do
 
           case code do
             nil ->
-              socket |> push_event("restore", %{key: "code", event: "restoreCode"})
+              socket |> push_event("get", %{key: @store_key, event: "restoreClientInfo"})
 
             {:error, reason} ->
               socket |> put_flash(:error, reason) |> redirect(to: ~p"/")
 
             {:ok, code} ->
-              socket |> setup_socket(code)
+              socket |> setup_socket(Map.put(player_info, :code, code))
           end
       end
 
     {:noreply, socket}
   end
 
-  def handle_event("restoreCode", token_data, socket) when is_binary(token_data) do
+  defp setup_socket(socket, %{} = client_info) do
+    PubSub.subscribe(Pixelgame.PubSub, "game:#{client_info.code}")
+
+    socket
+    |> assign(
+      game: Pixelgame.Games.Server.get_state(client_info.code),
+      client_info: client_info
+    )
+    |> push_event("set", %{
+      key: @store_key,
+      data: Phoenix.Token.encrypt(PixelgameWeb.Endpoint, @salt, client_info)
+    })
+    # remove query params w/o redirect
+    |> push_event("replaceHistory", %{url: "game"})
+  end
+
+  def handle_event("restoreClientInfo", token_data, socket) when is_binary(token_data) do
     # 3600 = 1 hour, abitrary but should match rejoin time limit
-    with {:ok, code} <-
+    with {:ok, client_info} <-
            Phoenix.Token.decrypt(PixelgameWeb.Endpoint, @salt, token_data, max_age: 3600),
-         :ok <- Games.Server.ensure_server_exists(code) do
-      {:noreply, socket |> setup_socket(code)}
+         :ok <- Games.Server.ensure_server_exists(Map.get(client_info, :code)) do
+      {:noreply, socket |> setup_socket(client_info)}
     else
       {:error, _} ->
-        handle_event("restoreCode", nil, socket |> push_event("clear", %{key: "code"}))
+        handle_event("restoreClientInfo", nil, socket |> push_event("clear", %{key: @store_key}))
     end
   end
 
   # no code to restore
-  def handle_event("restoreCode", _, socket) do
+  def handle_event("restoreClientInfo", _, socket) do
     {:noreply, socket |> put_flash(:error, "Not currently in game.") |> redirect(to: ~p"/")}
   end
 
@@ -94,32 +117,78 @@ defmodule PixelgameWeb.GameLive do
     {:noreply, socket |> assign(:game, state)}
   end
 
-  defp setup_socket(socket, code) do
-    PubSub.subscribe(Pixelgame.PubSub, "game:#{code}")
-
-    socket
-    |> assign(code: code, game: Pixelgame.Games.Server.get_state(code))
-    |> push_event("store", %{
-      key: "code",
-      data: Phoenix.Token.encrypt(PixelgameWeb.Endpoint, @salt, code)
-    })
-  end
-
   def render(assigns) do
     ~H"""
-    <div id="game_container" phx-hook="GameCodeStore">
-      <%= @code %>
-      <%= if @game == nil do %>
-        <div>
-          Game loading...
+    <div id="game_container" phx-hook="GameHooks">
+      <div class="grid grid-cols-2 justify-items-center mx-16">
+        <div class="text-sm">Code</div>
+        <div class="text-sm">Players</div>
+        <div class="text-2xl font-black">
+          <%= @client_info.code %>
         </div>
-      <% else %>
-        <ul>
-          <li :for={player <- Map.values(@game.players)}>
+        <div class="text-2xl font-black">
+          <%= map_size(@game.players) %> / <%= @game.max_players %>
+        </div>
+      </div>
+      <ul class="flex flex-wrap gap-4 my-8">
+        <li
+          :for={player <- Map.values(@game.players)}
+          class={[
+            "rounded p-4 flex-1 flex flex-col justify-between bg-fuchsia-900",
+            player.user_id == @client_info.user_id && "outline"
+          ]}
+        >
+          <span class="font-bold">
             <%= player.name %>
-          </li>
-        </ul>
-      <% end %>
+          </span>
+          <div class={[
+            "text-sm font-black",
+            if(player.ready, do: "text-green-400", else: "text-yellow-400")
+          ]}>
+            <%= if player.ready, do: "READY", else: "NOT READY" %>
+          </div>
+        </li>
+      </ul>
+      <div class="text-3xl font-black text-center">Settings</div>
+      <div class="bg-zinc-900 border p-4 rounded-lg mt-4 mb-8">
+        <.form for={@settings} class="flex flex-col gap-4">
+          <div>
+            <div class="block font-black text-xl mb-1">Presets</div>
+            <div class="flex flex-wrap gap-2">
+              <.enum_button class="text-center">
+                <.icon name="hero-cog-6-tooth" class="m-auto" />
+                <div>Custom</div>
+              </.enum_button>
+              <.enum_button>
+                <.icon name="hero-hashtag" class="m-auto" />
+                <div>Tic-tac-toe</div>
+              </.enum_button>
+              <.enum_button>
+                <.icon name="hero-currency-yen" class="m-auto" />
+                <div>Gomoku</div>
+              </.enum_button>
+            </div>
+          </div>
+          <.input
+            field={@settings["board_size"]}
+            type="range"
+            label="Board size"
+            min="3"
+            max="20"
+            step="1"
+          />
+          <.input
+            field={@settings["win_length"]}
+            type="range"
+            label="Win length"
+            min="3"
+            max="20"
+            step="1"
+          />
+        </.form>
+      </div>
+
+      <.button hue="green" class="block m-auto">Ready</.button>
     </div>
     """
   end

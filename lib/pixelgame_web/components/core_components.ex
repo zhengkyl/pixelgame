@@ -214,8 +214,8 @@ defmodule PixelgameWeb.CoreComponents do
     <button
       type={@type}
       class={[
-        "phx-submit-loading:opacity-75 rounded-lg py-2 px-3",
-        "text-sm font-semibold leading-6 text-white active:text-white/80 border",
+        "phx-submit-loading:opacity-75 rounded-lg py-4 px-12",
+        "text-xl font-black leading-6 text-white active:text-white/80 border",
         @class,
         (@hue != nil && "bg-#{@hue}-500 hover:bg-#{@hue}-400 border-#{@hue}-900") ||
           "bg-zinc-800 hover:bg-zinc-700"
@@ -247,8 +247,8 @@ defmodule PixelgameWeb.CoreComponents do
     ~H"""
     <.link
       class={[
-        "inline-flex justify-center phx-submit-loading:opacity-75 rounded-lg py-2 px-3",
-        "text-sm font-semibold leading-6 text-white active:text-white/80 border",
+        "inline-flex justify-center phx-submit-loading:opacity-75 rounded-lg py-4 px-6",
+        "text-xl font-black leading-6 text-white active:text-white/80 border",
         @class,
         (@hue != nil && "bg-#{@hue}-500 hover:bg-#{@hue}-400 border-#{@hue}-400") ||
           "bg-zinc-800 hover:bg-zinc-700"
@@ -257,6 +257,28 @@ defmodule PixelgameWeb.CoreComponents do
     >
       <%= render_slot(@inner_block) %>
     </.link>
+    """
+  end
+
+  attr :selected, :boolean, default: false
+  attr :rest, :global, include: ~w(disabled form name value)
+
+  slot :inner_block, required: true
+
+  def enum_button(assigns) do
+    ~H"""
+    <button
+      type="button"
+      class={[
+        "phx-submit-loading:opacity-75 rounded-lg px-6 py-4",
+        "font-semibold leading-6 text-white active:text-white/80 border",
+        (@selected && "bg-#{@hue}-500 hover:bg-#{@hue}-400 border-#{@hue}-900") ||
+          "bg-zinc-800 hover:bg-zinc-700"
+      ]}
+      {@rest}
+    >
+      <%= render_slot(@inner_block) %>
+    </button>
     """
   end
 
@@ -375,6 +397,44 @@ defmodule PixelgameWeb.CoreComponents do
     """
   end
 
+  # Custom range input
+  def input(%{type: "range"} = assigns) do
+    ~H"""
+    <div phx-feedback-for={@name} class={@class}>
+      <label for={@id} class="block font-black text-xl"><%= @label %></label>
+      <input
+        type={@type}
+        name={@name}
+        id={@id}
+        value={@value}
+        class={[
+          "block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6",
+          "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
+          "border-zinc-300 focus:border-zinc-400 accent-white",
+          @errors != [] && "border-rose-400 focus:border-rose-400",
+          @input_class
+        ]}
+        list={@id<>"-list"}
+        {@rest}
+      />
+      <datalist
+        :if={@rest.min && @rest.max}
+        id={@id<>"-list"}
+        class="flex justify-between text-center text-sm"
+      >
+        <option
+          :for={number <- String.to_integer(@rest.min)..String.to_integer(@rest.max)}
+          value={number}
+          label={number}
+          class={["w-[2ch] p-0", number > @value && "text-zinc-500"]}
+        >
+        </option>
+      </datalist>
+      <.error :for={msg <- @errors}><%= msg %></.error>
+    </div>
+    """
+  end
+
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
@@ -386,7 +446,7 @@ defmodule PixelgameWeb.CoreComponents do
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
-          "block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6",
+          "block w-full rounded-lg text-zinc-900 focus:ring-0 text-xl leading-6 px-6 py-4",
           "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
           "border-zinc-300 focus:border-zinc-400",
           @errors != [] && "border-rose-400 focus:border-rose-400",
@@ -407,7 +467,7 @@ defmodule PixelgameWeb.CoreComponents do
 
   def label(assigns) do
     ~H"""
-    <label for={@for} class="block text-sm font-semibold leading-6 text-zinc-800">
+    <label for={@for} class="block text-sm font-semibold leading-6">
       <%= render_slot(@inner_block) %>
     </label>
     """
