@@ -214,10 +214,10 @@ defmodule PixelgameWeb.CoreComponents do
     <button
       type={@type}
       class={[
-        "phx-submit-loading:opacity-75 rounded-lg py-4 px-12",
+        "phx-submit-loading:opacity-75 rounded-lg py-4 px-6",
         "text-xl font-black leading-6 text-white active:text-white/80 border",
         @class,
-        (@hue != nil && "bg-#{@hue}-500 hover:bg-#{@hue}-400 border-#{@hue}-900") ||
+        (@hue != nil && "bg-#{@hue}-600 hover:bg-#{@hue}-500 border-#{@hue}-600") ||
           "bg-zinc-800 hover:bg-zinc-700"
       ]}
       {@rest}
@@ -250,7 +250,7 @@ defmodule PixelgameWeb.CoreComponents do
         "inline-flex justify-center phx-submit-loading:opacity-75 rounded-lg py-4 px-6",
         "text-xl font-black leading-6 text-white active:text-white/80 border",
         @class,
-        (@hue != nil && "bg-#{@hue}-500 hover:bg-#{@hue}-400 border-#{@hue}-400") ||
+        (@hue != nil && "bg-#{@hue}-600 hover:bg-#{@hue}-500 border-#{@hue}-600") ||
           "bg-zinc-800 hover:bg-zinc-700"
       ]}
       {@rest}
@@ -270,9 +270,9 @@ defmodule PixelgameWeb.CoreComponents do
     <button
       type="button"
       class={[
-        "phx-submit-loading:opacity-75 rounded-lg px-6 py-4",
+        "phx-submit-loading:opacity-75 rounded-lg px-4 py-4",
         "font-semibold leading-6 text-white active:text-white/80 border",
-        (@selected && "bg-#{@hue}-500 hover:bg-#{@hue}-400 border-#{@hue}-900") ||
+        (@selected && "bg-#{@hue}-600 hover:bg-#{@hue}-500 border-#{@hue}-600") ||
           "bg-zinc-800 hover:bg-zinc-700"
       ]}
       {@rest}

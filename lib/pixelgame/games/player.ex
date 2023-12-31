@@ -4,23 +4,23 @@ defmodule Pixelgame.Games.Player do
 
   alias __MODULE__
 
+  @primary_key {:id, :id, []}
   embedded_schema do
     field :name, :string
-    field :user_id, :integer
     field :order, :integer
     field :color, :string
-    field :ready, :boolean
+    field :ready, :boolean, default: false
   end
 
   @type t :: %Player{
           name: String.t(),
-          user_id: integer()
+          id: integer()
         }
 
   def changeset(player, attrs) do
     player
-    |> cast(attrs, [:name, :user_id, :color])
-    |> validate_required([:name, :user_id])
+    |> cast(attrs, [:name, :id, :color])
+    |> validate_required([:name, :id])
     |> validate_format(:color, ~r/#[A-F\d]{6}/)
   end
 
@@ -28,8 +28,11 @@ defmodule Pixelgame.Games.Player do
   def create(attrs) do
     # apply_action checks validity via pretend insert
     case %Player{} |> changeset(attrs) |> apply_action(:insert) do
-      {:error, _} -> {:error, "Invalid player info"}
-      player -> player
+      {:error, _} ->
+        {:error, "Invalid player info"}
+
+      player ->
+        player
     end
   end
 end

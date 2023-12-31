@@ -53,9 +53,12 @@ defmodule Pixelgame.Games.Server do
     GenServer.call(via_tuple(code), {:join_game, player})
   end
 
-  @spec ready_player(any(), any()) :: any()
-  def ready_player(code, player_id) do
-    GenServer.call(via_tuple(code), {:ready_player, player_id})
+  def leave_game(code, player_id) do
+    GenServer.call(via_tuple(code), {:leave_game, player_id})
+  end
+
+  def ready_player(code, player_id, ready) do
+    GenServer.call(via_tuple(code), {:ready_player, player_id, ready})
   end
 
   def start_game(code) do
@@ -98,10 +101,27 @@ defmodule Pixelgame.Games.Server do
     end
   end
 
-  def handle_call({:ready_player, player_id}, _from, %TicTacToe{} = state) do
+  def handle_call({:leave_game, player_id}, _from, %TicTacToe{} = state) do
     with {:ok, player} <- TicTacToe.find_player(state, player_id),
-         {:ok, state} <- TicTacToe.ready(state, player) do
-      broadcast_game_state(state)
+         {:ok, state} <- TicTacToe.leave(state, player) do
+      case map_size(state.players) do
+        0 ->
+          {:stop, :normal, :ok, state}
+
+        _ ->
+          broadcast_game_state(state)
+          {:reply, :ok, state}
+      end
+    else
+      {:error, _reason} = error ->
+        {:reply, error, state}
+    end
+  end
+
+  def handle_call({:ready_player, player_id, ready}, _from, %TicTacToe{} = state) do
+    with {:ok, player} <- TicTacToe.find_player(state, player_id),
+         {:ok, state} <- TicTacToe.ready(state, player, ready) do
+      if ready != player.ready, do: broadcast_game_state(state)
       {:reply, :ok, state}
     else
       {:error, reason} = error ->

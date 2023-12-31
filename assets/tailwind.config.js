@@ -9,13 +9,13 @@ module.exports = {
   content: ["./js/**/*.js", "../lib/*_web.ex", "../lib/*_web/**/*.*ex"],
   safelist: [
     {
-      pattern: /bg-(green|sky|purple)-500/,
+      pattern: /bg-(green|sky|purple|yellow|amber)-600/,
     },
     {
-      pattern: /border-(green|sky|purple)-400/,
+      pattern: /border-(green|sky|purple|yellow|amber)-600/,
     },
     {
-      pattern: /bg-(green|sky|purple)-400/,
+      pattern: /bg-(green|sky|purple|yellow|amber)-500/,
       variants: ["hover"],
     },
   ],

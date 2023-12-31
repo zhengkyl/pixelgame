@@ -8,7 +8,7 @@ defmodule PixelgameWeb.GameLive do
     {:ok,
      socket
      |> assign(
-       client_info: %{code: "****", name: "Loading name...", user_id: "doesn't matter yet"},
+       client_info: %{code: "****", id: nil},
        game: %TicTacToe{},
        settings: to_form(%{"board_size" => 3, "win_length" => 3, "preset" => "custom"})
      )}
@@ -31,11 +31,11 @@ defmodule PixelgameWeb.GameLive do
               %{current_user: nil} ->
                 %{
                   name: Pixelgame.NameGenerator.generate_name(),
-                  user_id: -:rand.uniform(1_000_000_000)
+                  id: -:rand.uniform(1_000_000_000)
                 }
 
               %{current_user: user} ->
-                %{name: user.name, user_id: user.id}
+                %{name: user.name, id: user.id}
             end
 
           code =
@@ -109,6 +109,34 @@ defmodule PixelgameWeb.GameLive do
     {:noreply, socket |> put_flash(:error, "Not currently in game.") |> redirect(to: ~p"/")}
   end
 
+  def handle_event("change_settings", params, socket) do
+    IO.inspect(params)
+    {:noreply, socket}
+  end
+
+  def handle_event("toggle_ready", _params, socket) do
+    %{client_info: %{code: code, id: id}, game: %{players: players}} = socket.assigns
+
+    case Games.Server.ready_player(code, id, !players[id].ready) do
+      :ok -> {:noreply, socket}
+      {:error, reason} -> {:noreply, socket |> put_flash(:error, reason)}
+    end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("leave", _params, socket) do
+    %{code: code, id: id} = socket.assigns.client_info
+
+    case Games.Server.leave_game(code, id) do
+      :ok ->
+        {:noreply, socket |> redirect(to: ~p"/")}
+
+      _ ->
+        {:noreply, socket |> put_flash(:error, "Failed to leave game.")}
+    end
+  end
+
   def handle_info(:timeout, socket) do
     {:noreply, socket |> put_flash(:error, "Game timed out.") |> redirect(to: ~p"/")}
   end
@@ -120,75 +148,103 @@ defmodule PixelgameWeb.GameLive do
   def render(assigns) do
     ~H"""
     <div id="game_container" phx-hook="GameHooks">
-      <div class="grid grid-cols-2 justify-items-center mx-16">
-        <div class="text-sm">Code</div>
-        <div class="text-sm">Players</div>
-        <div class="text-2xl font-black">
-          <%= @client_info.code %>
-        </div>
-        <div class="text-2xl font-black">
-          <%= map_size(@game.players) %> / <%= @game.max_players %>
-        </div>
-      </div>
-      <ul class="flex flex-wrap gap-4 my-8">
-        <li
-          :for={player <- Map.values(@game.players)}
-          class={[
-            "rounded p-4 flex-1 flex flex-col justify-between bg-fuchsia-900",
-            player.user_id == @client_info.user_id && "outline"
-          ]}
+      <div :if={@client_info.id && @game.status == :waiting}>
+        <div
+          :if={
+            map_size(@game.players) >= @game.min_players &&
+              Map.values(@game.players) |> Enum.all?(fn player -> player.ready end)
+          }
+          class="bg-black/80 fixed inset-0 transition-opacity z-10 font-bold grid place-content-center"
         >
-          <span class="font-bold">
-            <%= player.name %>
-          </span>
-          <div class={[
-            "text-sm font-black",
-            if(player.ready, do: "text-green-400", else: "text-yellow-400")
-          ]}>
-            <%= if player.ready, do: "READY", else: "NOT READY" %>
+          <span id="countdown" phx-hook="Countdown" class="mb-[50%]"></span>
+        </div>
+        <div class="grid grid-cols-2 justify-items-center mx-16">
+          <div class="text-sm">Code</div>
+          <div class="text-sm">Players</div>
+          <div class="text-2xl font-black">
+            <%= @client_info.code %>
           </div>
-        </li>
-      </ul>
-      <div class="text-3xl font-black text-center">Settings</div>
-      <div class="bg-zinc-900 border p-4 rounded-lg mt-4 mb-8">
-        <.form for={@settings} class="flex flex-col gap-4">
-          <div>
-            <div class="block font-black text-xl mb-1">Presets</div>
-            <div class="flex flex-wrap gap-2">
-              <.enum_button class="text-center">
-                <.icon name="hero-cog-6-tooth" class="m-auto" />
-                <div>Custom</div>
-              </.enum_button>
-              <.enum_button>
-                <.icon name="hero-hashtag" class="m-auto" />
-                <div>Tic-tac-toe</div>
-              </.enum_button>
-              <.enum_button>
-                <.icon name="hero-currency-yen" class="m-auto" />
-                <div>Gomoku</div>
-              </.enum_button>
+          <div class="text-2xl font-black">
+            <%= map_size(@game.players) %> / <%= @game.max_players %>
+          </div>
+        </div>
+        <ul class="flex flex-wrap gap-4 my-8">
+          <li
+            :for={player <- Map.values(@game.players)}
+            class={[
+              "rounded p-4 flex-1 flex flex-col justify-between bg-fuchsia-900",
+              player.id == @client_info.id && "outline"
+            ]}
+          >
+            <span class="font-bold">
+              <%= player.name %>
+            </span>
+            <div class={[
+              "text-sm font-black",
+              if(player.ready, do: "text-green-400", else: "text-yellow-400")
+            ]}>
+              <%= if player.ready, do: "READY", else: "NOT READY" %>
             </div>
-          </div>
-          <.input
-            field={@settings["board_size"]}
-            type="range"
-            label="Board size"
-            min="3"
-            max="20"
-            step="1"
-          />
-          <.input
-            field={@settings["win_length"]}
-            type="range"
-            label="Win length"
-            min="3"
-            max="20"
-            step="1"
-          />
-        </.form>
-      </div>
+          </li>
+        </ul>
+        <div class="text-3xl font-black text-center">Settings</div>
+        <div class="bg-zinc-900 border p-4 rounded-lg mt-4 mb-8">
+          <.form for={@settings} class="flex flex-col gap-4" phx-change="change_settings">
+            <div>
+              <div class="block font-black text-xl mb-1">Presets</div>
+              <div class="flex flex-wrap gap-2">
+                <.enum_button class="text-center">
+                  <.icon name="hero-cog-6-tooth" class="m-auto" />
+                  <div>Custom</div>
+                </.enum_button>
+                <.enum_button>
+                  <.icon name="hero-hashtag" class="m-auto" />
+                  <div>Tic-tac-toe</div>
+                </.enum_button>
+                <.enum_button>
+                  <.icon name="hero-currency-yen" class="m-auto" />
+                  <div>Gomoku</div>
+                </.enum_button>
+              </div>
+            </div>
+            <.input
+              field={@settings["board_size"]}
+              type="range"
+              label="Board size"
+              min="3"
+              max="20"
+              step="1"
+            />
+            <.input
+              field={@settings["win_length"]}
+              type="range"
+              label="Win length"
+              min="3"
+              max="20"
+              step="1"
+            />
+          </.form>
+        </div>
 
-      <.button hue="green" class="block m-auto">Ready</.button>
+        <div class="flex gap-4">
+          <.button phx-click="leave">
+            Leave
+          </.button>
+          <.button
+            hue={(!@game.players[@client_info.id].ready && "green") || "yellow"}
+            class="flex-1"
+            phx-click={JS.push("toggle_ready", value: %{ready: @game.players[@client_info.id].ready})}
+          >
+            <%= (@game.players[@client_info.id].ready && "Waiting...") || "Ready up" %>
+          </.button>
+        </div>
+      </div>
+      <div :if={@game.status == :playing}>
+        Playing
+      </div>
+      <div :if={@game.status == :done}>
+        Done
+      </div>
     </div>
     """
   end

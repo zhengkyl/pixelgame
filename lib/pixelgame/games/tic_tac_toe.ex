@@ -34,8 +34,8 @@ defmodule Pixelgame.Games.TicTacToe do
   def new(code, player, board_size \\ 3, win_length \\ 3) do
     %TicTacToe{
       code: code,
-      players: %{player.user_id => player},
-      pieces: %{player.user_id => MapSet.new()},
+      players: %{player.id => player},
+      pieces: %{player.id => MapSet.new()},
       board_size: board_size,
       win_length: win_length
     }
@@ -64,7 +64,7 @@ defmodule Pixelgame.Games.TicTacToe do
       do: {:error, "Can't join EMPTY game"}
 
   def join(%TicTacToe{players: players, pieces: pieces} = state, %Player{} = new_player) do
-    case Map.has_key?(players, new_player.user_id) do
+    case Map.has_key?(players, new_player.id) do
       true ->
         :ok
 
@@ -73,19 +73,23 @@ defmodule Pixelgame.Games.TicTacToe do
          %TicTacToe{
            state
            | players:
-               Map.put(players, new_player.user_id, %Player{new_player | order: map_size(players)}),
-             pieces: Map.put(pieces, new_player.user_id, MapSet.new())
+               Map.put(players, new_player.id, %Player{new_player | order: map_size(players)}),
+             pieces: Map.put(pieces, new_player.id, MapSet.new())
          }
          |> reset_timer()}
     end
   end
 
-  def ready(%TicTacToe{status: :waiting} = state, %Player{} = player) do
+  def leave(%TicTacToe{players: players} = state, %Player{id: id}) do
+    {:ok, %TicTacToe{state | players: Map.delete(players, id)}}
+  end
+
+  def ready(%TicTacToe{status: :waiting} = state, %Player{} = player, ready) do
     # Is this the best way to write this?
     {:ok,
      %TicTacToe{
        state
-       | players: %{state.players | player.user_id => %Player{player | ready: !player.ready}}
+       | players: %{state.players | player.id => %Player{player | ready: ready}}
      }}
   end
 
@@ -108,7 +112,7 @@ defmodule Pixelgame.Games.TicTacToe do
       {:ok,
        %TicTacToe{
          state
-         | pieces: %{pieces | [player.user_id] => pieces[player.user_id] |> MapSet.put(move)}
+         | pieces: %{pieces | [player.id] => pieces[player.id] |> MapSet.put(move)}
        }
        |> check_win(player)
        |> next_turn()
@@ -146,8 +150,8 @@ defmodule Pixelgame.Games.TicTacToe do
 
   @directions [{{-1, 0}, {1, 0}}, {{-1, -1}, {1, 1}}, {{-1, 1}, {1, -1}}, {{0, -1}, {0, 1}}]
 
-  defp is_win?(%TicTacToe{pieces: pieces, win_length: win_length}, %Player{user_id: user_id}) do
-    values = Map.values(pieces[user_id])
+  defp is_win?(%TicTacToe{pieces: pieces, win_length: win_length}, %Player{id: id}) do
+    values = Map.values(pieces[id])
 
     Enum.any?(@directions, fn {{ax, ay}, {bx, by}} ->
       Enum.reduce_while(values, %{}, fn {x, y}, acc ->
