@@ -7,7 +7,7 @@ defmodule Pixelgame.Games.TicTacToe do
             players: %{},
             min_players: 2,
             max_players: 2,
-            turn: 1,
+            turn: 0,
             pieces: %{},
             board_size: 3,
             win_length: 3,
@@ -112,7 +112,7 @@ defmodule Pixelgame.Games.TicTacToe do
       {:ok,
        %TicTacToe{
          state
-         | pieces: %{pieces | [player.id] => pieces[player.id] |> MapSet.put(move)}
+         | pieces: %{pieces | player.id => pieces[player.id] |> MapSet.put(move)}
        }
        |> check_win(player)
        |> next_turn()
@@ -126,8 +126,7 @@ defmodule Pixelgame.Games.TicTacToe do
     do: {:error, "Can't make move in #{status} game"}
 
   defp verify_player_turn(%TicTacToe{} = state, %Player{} = player) do
-    # turn is 1-indexed but order is 0-indexed
-    case rem(state.turn - 1, map_size(state.players)) do
+    case rem(state.turn, map_size(state.players)) do
       x when x == player.order -> :ok
       _ -> {:error, "Not player:#{player.order}'s turn"}
     end
@@ -151,26 +150,24 @@ defmodule Pixelgame.Games.TicTacToe do
   @directions [{{-1, 0}, {1, 0}}, {{-1, -1}, {1, 1}}, {{-1, 1}, {1, -1}}, {{0, -1}, {0, 1}}]
 
   defp is_win?(%TicTacToe{pieces: pieces, win_length: win_length}, %Player{id: id}) do
-    values = Map.values(pieces[id])
-
     Enum.any?(@directions, fn {{ax, ay}, {bx, by}} ->
-      Enum.reduce_while(values, %{}, fn {x, y}, acc ->
+      Enum.reduce_while(pieces[id], %{}, fn {x, y}, acc ->
         length = 1 + Map.get(acc, {x + ax, y + ay}, 0) + Map.get(acc, {x + bx, y + by}, 0)
 
         case length do
-          ^win_length -> {:halt, acc}
+          ^win_length -> {:halt, true}
           _ -> {:cont, Map.put(acc, {x, y}, length)}
         end
       end)
       |> case do
-        {:halt, _} -> true
+        true -> true
         _ -> false
       end
     end)
   end
 
   def next_turn(%TicTacToe{status: :playing, turn: turn, board_size: board_size} = state) do
-    last_turn = board_size * board_size
+    last_turn = board_size * board_size - 1
 
     case turn do
       ^last_turn -> %TicTacToe{state | status: :done}

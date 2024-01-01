@@ -31,15 +31,15 @@ export const CapitalizeInput = {
 
 export const Countdown = {
   mounted() {
-    let count = 3;
+    let count = 4;
 
     const nextNum = () => {
       this.el.textContent = count;
 
-      this.el.style = "font-size: min(50vw, 50svh)";
+      this.el.style = "font-size: min(100vw, 50svh)";
       this.el.offsetHeight; // trigger reflow -> transition runs
       this.el.style =
-        "font-size: min(25vw, 25svh);transition: font-size 0.5s ease-in-out";
+        "font-size: min(50vw, 25svh);transition: font-size 0.5s ease-in-out";
 
       count--;
       if (count) setTimeout(nextNum, 800);

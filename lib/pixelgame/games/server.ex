@@ -61,10 +61,6 @@ defmodule Pixelgame.Games.Server do
     GenServer.call(via_tuple(code), {:ready_player, player_id, ready})
   end
 
-  def start_game(code) do
-    GenServer.call(via_tuple(code), :start_game)
-  end
-
   def restart_game(code) do
     GenServer.call(via_tuple(code), :restart_game)
   end
@@ -120,8 +116,7 @@ defmodule Pixelgame.Games.Server do
 
   def handle_call({:ready_player, player_id, ready}, _from, %TicTacToe{} = state) do
     with {:ok, player} <- TicTacToe.find_player(state, player_id),
-         {:ok, state} <- TicTacToe.ready(state, player, ready) do
-      if ready != player.ready, do: broadcast_game_state(state)
+         {:ok, state} <- try_ready_and_start(state, player, ready) do
       {:reply, :ok, state}
     else
       {:error, reason} = error ->
@@ -129,17 +124,6 @@ defmodule Pixelgame.Games.Server do
           "Fail to ready player: #{player_id} in game_#{state.code}: #{inspect(reason)}"
         )
 
-        {:reply, error, state}
-    end
-  end
-
-  def handle_call(:start_game, _from, %TicTacToe{} = state) do
-    with {:ok, state} <- TicTacToe.start(state) do
-      broadcast_game_state(state)
-      {:reply, :ok, state}
-    else
-      {:error, reason} = error ->
-        Logger.error("Fail to start game_#{state.code}: #{inspect(reason)}")
         {:reply, error, state}
     end
   end
@@ -162,10 +146,21 @@ defmodule Pixelgame.Games.Server do
     {:reply, :ok, state}
   end
 
+  def handle_info(:start_game, %TicTacToe{} = state) do
+    with {:ok, state} <- TicTacToe.start(state) do
+      broadcast_game_state(state)
+      {:noreply, state}
+    else
+      {:error, reason} ->
+        Logger.error("Fail to start game: game_#{state.code}: #{inspect(reason)}")
+        {:noreply, state}
+    end
+  end
+
   def handle_info(:end_turn, %TicTacToe{} = state) do
     state = TicTacToe.next_turn(state)
     broadcast_game_state(state)
-    {:reply, :ok, state}
+    {:noreply, state}
   end
 
   def handle_info(:end_for_timeout, %TicTacToe{} = state) do
@@ -175,6 +170,26 @@ defmodule Pixelgame.Games.Server do
     PubSub.broadcast(Pixelgame.PubSub, "game:#{state.code}", :timeout)
 
     {:stop, :normal, state}
+  end
+
+  defp try_ready_and_start(%TicTacToe{} = state, player, ready) when player.ready == ready,
+    do: {:ok, state}
+
+  defp try_ready_and_start(%TicTacToe{} = state, player, ready) do
+    with {:ok, state} <- TicTacToe.ready(state, player, ready),
+         {:ok, state} <- try_start(state) do
+      broadcast_game_state(state)
+      {:ok, state}
+    end
+  end
+
+  defp try_start(%TicTacToe{} = state) do
+    if map_size(state.players) >= state.min_players &&
+         Map.values(state.players) |> Enum.all?(fn player -> player.ready end) do
+      Process.send_after(self(), :start_game, 4000)
+    end
+
+    {:ok, state}
   end
 
   def broadcast_game_state(%TicTacToe{} = state) do

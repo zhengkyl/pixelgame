@@ -7,7 +7,7 @@ defmodule Pixelgame.Games.Player do
   @primary_key {:id, :id, []}
   embedded_schema do
     field :name, :string
-    field :order, :integer
+    field :order, :integer, default: 0
     field :color, :string
     field :ready, :boolean, default: false
   end

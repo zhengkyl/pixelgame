@@ -18,6 +18,9 @@ module.exports = {
       pattern: /bg-(green|sky|purple|yellow|amber)-500/,
       variants: ["hover"],
     },
+    {
+      pattern: /grid-cols-([3-9]|1\d|20)/,
+    },
   ],
   theme: {
     extend: {

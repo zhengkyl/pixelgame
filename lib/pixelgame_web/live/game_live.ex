@@ -137,6 +137,23 @@ defmodule PixelgameWeb.GameLive do
     end
   end
 
+  def handle_event("move", params, socket) do
+    IO.inspect(socket.assigns.game)
+    %{code: code, id: id} = socket.assigns.client_info
+
+    case Games.Server.make_move(
+           code,
+           id,
+           {String.to_integer(params["row"]), String.to_integer(params["col"])}
+         ) do
+      :ok ->
+        {:noreply, socket}
+
+      _ ->
+        {:noreply, socket |> put_flash(:error, "Failed to make move.")}
+    end
+  end
+
   def handle_info(:timeout, socket) do
     {:noreply, socket |> put_flash(:error, "Game timed out.") |> redirect(to: ~p"/")}
   end
@@ -154,9 +171,14 @@ defmodule PixelgameWeb.GameLive do
             map_size(@game.players) >= @game.min_players &&
               Map.values(@game.players) |> Enum.all?(fn player -> player.ready end)
           }
-          class="bg-black/80 fixed inset-0 transition-opacity z-10 font-bold grid place-content-center"
+          class="bg-black/80 fixed inset-0 transition-opacity z-10 font-bold"
         >
-          <span id="countdown" phx-hook="Countdown" class="mb-[50%]"></span>
+          <div class="mt-[15svh] h-[min(100vw,50svh)] flex justify-center items-center">
+            <div id="countdown" phx-hook="Countdown"></div>
+          </div>
+          <.button phx-click="toggle_ready" class="block m-auto">
+            Cancel
+          </.button>
         </div>
         <div class="grid grid-cols-2 justify-items-center mx-16">
           <div class="text-sm">Code</div>
@@ -233,17 +255,32 @@ defmodule PixelgameWeb.GameLive do
           <.button
             hue={(!@game.players[@client_info.id].ready && "green") || "yellow"}
             class="flex-1"
-            phx-click={JS.push("toggle_ready", value: %{ready: @game.players[@client_info.id].ready})}
+            phx-click="toggle_ready"
           >
             <%= (@game.players[@client_info.id].ready && "Waiting...") || "Ready up" %>
           </.button>
         </div>
       </div>
-      <div :if={@game.status == :playing}>
-        Playing
-      </div>
-      <div :if={@game.status == :done}>
-        Done
+      <div :if={@game.status !== :waiting}>
+        <div :if={@game.status == :done}>
+          Done
+        </div>
+        <div class={"grid grid-cols-#{@game.board_size} gap-2"}>
+          <%= for x <- 1..@game.board_size do %>
+            <%= for y <- 1..@game.board_size do %>
+              <div
+                class="border rounded-lg aspect-square"
+                phx-click="move"
+                phx-value-row={x}
+                phx-value-col={y}
+              >
+                <%= for id <- Map.keys(@game.pieces) do %>
+                  <%= if MapSet.member?(@game.pieces[id], {x, y}), do: @game.players[id].name %>
+                <% end %>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
       </div>
     </div>
     """
