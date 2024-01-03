@@ -4,11 +4,16 @@ defmodule Pixelgame.Games.Player do
 
   alias __MODULE__
 
+  @shapes [:cross, :circle, :square, :triangle]
+
+  def shapes(), do: @shapes
+
   @primary_key {:id, :id, []}
   embedded_schema do
     field :name, :string
     field :order, :integer, default: 0
-    field :color, :string
+    field :shape, Ecto.Enum, values: @shapes, default: :cross
+    field :color, :string, default: "#FFFFFF"
     field :ready, :boolean, default: false
   end
 

@@ -42,7 +42,7 @@ defmodule Pixelgame.Games.TicTacToe do
     |> reset_timer()
   end
 
-  def restart(%TicTacToe{} = state) do
+  def reset(%TicTacToe{} = state) do
     %TicTacToe{
       state
       | status: :waiting,
@@ -69,11 +69,21 @@ defmodule Pixelgame.Games.TicTacToe do
         :ok
 
       false ->
+        shape =
+          Player.shapes()
+          |> Enum.find(:cross, fn shape ->
+            Map.values(players) |> Enum.all?(fn player -> player.shape != shape end)
+          end)
+
         {:ok,
          %TicTacToe{
            state
            | players:
-               Map.put(players, new_player.id, %Player{new_player | order: map_size(players)}),
+               Map.put(players, new_player.id, %Player{
+                 new_player
+                 | order: map_size(players),
+                   shape: shape
+               }),
              pieces: Map.put(pieces, new_player.id, MapSet.new())
          }
          |> reset_timer()}
@@ -84,8 +94,8 @@ defmodule Pixelgame.Games.TicTacToe do
     {:ok, %TicTacToe{state | players: Map.delete(players, id)}}
   end
 
-  def ready(%TicTacToe{status: :waiting} = state, %Player{} = player, ready) do
-    # Is this the best way to write this?
+  def ready(%TicTacToe{status: status} = state, %Player{} = player, ready)
+      when status in [:waiting, :done] do
     {:ok,
      %TicTacToe{
        state
@@ -106,8 +116,9 @@ defmodule Pixelgame.Games.TicTacToe do
   def start(%TicTacToe{status: status, players: players}),
     do: {:error, "Can't start #{status} game with #{map_size(players)} players"}
 
-  def move(%TicTacToe{status: :playing, pieces: pieces} = state, %Player{} = player, move) do
-    with :ok <- verify_player_turn(state, player),
+  def move(%TicTacToe{pieces: pieces} = state, %Player{} = player, move) do
+    with :ok <- verify_status(state, [:playing]),
+         :ok <- verify_player_turn(state, player),
          :ok <- verify_valid_move(state, move) do
       {:ok,
        %TicTacToe{
@@ -122,13 +133,24 @@ defmodule Pixelgame.Games.TicTacToe do
     end
   end
 
-  def move(%TicTacToe{status: status}, %Player{}, _),
-    do: {:error, "Can't make move in #{status} game"}
+  def verify_status(%TicTacToe{status: status}, allowed) do
+    case Enum.member?(allowed, status) do
+      true -> :ok
+      false -> {:error, "Game is #{status}"}
+    end
+  end
 
-  defp verify_player_turn(%TicTacToe{} = state, %Player{} = player) do
+  def verify_player_turn(%TicTacToe{} = state, %Player{} = player) do
+    case is_player_turn?(state, player) do
+      true -> :ok
+      false -> {:error, "Not player:#{player.order}'s turn"}
+    end
+  end
+
+  def is_player_turn?(%TicTacToe{} = state, %Player{} = player) do
     case rem(state.turn, map_size(state.players)) do
-      x when x == player.order -> :ok
-      _ -> {:error, "Not player:#{player.order}'s turn"}
+      x when x == player.order -> true
+      _ -> false
     end
   end
 
@@ -147,12 +169,14 @@ defmodule Pixelgame.Games.TicTacToe do
     end
   end
 
-  @directions [{{-1, 0}, {1, 0}}, {{-1, -1}, {1, 1}}, {{-1, 1}, {1, -1}}, {{0, -1}, {0, 1}}]
+  @directions [{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}]
 
   defp is_win?(%TicTacToe{pieces: pieces, win_length: win_length}, %Player{id: id}) do
-    Enum.any?(@directions, fn {{ax, ay}, {bx, by}} ->
-      Enum.reduce_while(pieces[id], %{}, fn {x, y}, acc ->
-        length = 1 + Map.get(acc, {x + ax, y + ay}, 0) + Map.get(acc, {x + bx, y + by}, 0)
+    Enum.any?(@directions, fn {dx, dy} ->
+      pieces[id]
+      |> Enum.sort()
+      |> Enum.reduce_while(%{}, fn {x, y}, acc ->
+        length = 1 + Map.get(acc, {x + dx, y + dy}, 0)
 
         case length do
           ^win_length -> {:halt, true}

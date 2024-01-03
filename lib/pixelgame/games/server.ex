@@ -61,10 +61,6 @@ defmodule Pixelgame.Games.Server do
     GenServer.call(via_tuple(code), {:ready_player, player_id, ready})
   end
 
-  def restart_game(code) do
-    GenServer.call(via_tuple(code), :restart_game)
-  end
-
   def make_move(code, player_id, move) do
     GenServer.call(via_tuple(code), {:make_move, player_id, move})
   end
@@ -116,7 +112,7 @@ defmodule Pixelgame.Games.Server do
 
   def handle_call({:ready_player, player_id, ready}, _from, %TicTacToe{} = state) do
     with {:ok, player} <- TicTacToe.find_player(state, player_id),
-         {:ok, state} <- try_ready_and_start(state, player, ready) do
+         {:ok, state} <- try_ready_and_next(state, player, ready) do
       {:reply, :ok, state}
     else
       {:error, reason} = error ->
@@ -138,12 +134,6 @@ defmodule Pixelgame.Games.Server do
         Logger.error("Failed to move in game_#{state.code}: #{inspect(reason)}")
         {:reply, error, state}
     end
-  end
-
-  def handle_call(:restart_game, _from, %TicTacToe{} = state) do
-    state = TicTacToe.restart(state)
-    broadcast_game_state(state)
-    {:reply, :ok, state}
   end
 
   def handle_info(:start_game, %TicTacToe{} = state) do
@@ -172,18 +162,25 @@ defmodule Pixelgame.Games.Server do
     {:stop, :normal, state}
   end
 
-  defp try_ready_and_start(%TicTacToe{} = state, player, ready) when player.ready == ready,
+  defp try_ready_and_next(%TicTacToe{} = state, player, ready) when player.ready == ready,
     do: {:ok, state}
 
-  defp try_ready_and_start(%TicTacToe{} = state, player, ready) do
+  defp try_ready_and_next(%TicTacToe{} = state, player, ready) do
     with {:ok, state} <- TicTacToe.ready(state, player, ready),
-         {:ok, state} <- try_start(state) do
+         {:ok, state} <- try_next(state) do
       broadcast_game_state(state)
       {:ok, state}
     end
   end
 
-  defp try_start(%TicTacToe{} = state) do
+  defp try_next(%TicTacToe{status: :done} = state) do
+    case Map.values(state.players) |> Enum.all?(fn player -> !player.ready end) do
+      true -> {:ok, TicTacToe.reset(state)}
+      false -> {:ok, state}
+    end
+  end
+
+  defp try_next(%TicTacToe{status: :waiting} = state) do
     if map_size(state.players) >= state.min_players &&
          Map.values(state.players) |> Enum.all?(fn player -> player.ready end) do
       Process.send_after(self(), :start_game, 4000)
