@@ -20,7 +20,7 @@ import "phoenix_html";
 // Establish Phoenix Socket and LiveView configuration.
 import { Socket } from "phoenix";
 import { LiveSocket } from "phoenix_live_view";
-import { GameHooks, CapitalizeInput, Countdown } from "./hooks";
+import { GameHooks, CapitalizeInput, Countdown, Timer } from "./hooks";
 import topbar from "../vendor/topbar";
 
 let csrfToken = document
@@ -32,6 +32,7 @@ let liveSocket = new LiveSocket("/live", Socket, {
     GameHooks,
     CapitalizeInput,
     Countdown,
+    Timer,
   },
 });
 

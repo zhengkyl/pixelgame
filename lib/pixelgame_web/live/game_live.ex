@@ -163,6 +163,23 @@ defmodule PixelgameWeb.GameLive do
   end
 
   def handle_info({:game_state, %TicTacToe{} = state}, socket) do
+    %{game: game} = socket.assigns
+
+    socket =
+      case state.status do
+        :playing when game.status == :playing and state.turn != game.turn ->
+          socket |> push_event("startTimer", %{s: 60})
+
+        :playing when game.status == :waiting ->
+          socket |> push_event("startTimer", %{s: 60})
+
+        :done when game.status == :playing ->
+          socket |> push_event("stopTimer", %{})
+
+        _ ->
+          socket
+      end
+
     {:noreply,
      socket
      |> assign(
@@ -288,9 +305,7 @@ defmodule PixelgameWeb.GameLive do
                 OPPONENT'S TURN
             <% end %>
           </div>
-          <div class="text-xl flex-1 text-right">
-            TIMER HERE
-          </div>
+          <div id="timer" class="text-xl flex-1 text-right" phx-hook="Timer"></div>
         </div>
         <ul class="flex flex-wrap gap-4">
           <li

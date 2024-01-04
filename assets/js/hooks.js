@@ -48,3 +48,24 @@ export const Countdown = {
     nextNum();
   },
 };
+
+export const Timer = {
+  mounted() {
+    let timeout;
+    this.handleEvent("startTimer", (obj) => {
+      clearTimeout(timeout);
+      let seconds = obj.s;
+
+      const run = () => {
+        this.el.textContent =
+          `${Math.floor(seconds / 60)}:` + `${seconds % 60}`.padStart(2, "0");
+        seconds--;
+        if (seconds) timeout = setTimeout(run, 1000);
+      };
+      run();
+    });
+    this.handleEvent("stopTimer", () => {
+      clearTimeout(timeout);
+    });
+  },
+};
