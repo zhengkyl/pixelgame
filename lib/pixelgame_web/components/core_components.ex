@@ -119,7 +119,7 @@ defmodule PixelgameWeb.CoreComponents do
       ]}
       {@rest}
     >
-      <p :if={@title} class="flex items-center gap-1.5 text-sm font-semibold leading-6">
+      <p :if={@title} class="flex items-center gap-1.5 text-sm font-semibold">
         <.icon :if={@kind == :info} name="hero-information-circle-mini" class="h-4 w-4" />
         <.icon :if={@kind == :error} name="hero-exclamation-circle-mini" class="h-4 w-4" />
         <%= @title %>
@@ -214,8 +214,8 @@ defmodule PixelgameWeb.CoreComponents do
     <button
       type={@type}
       class={[
-        "phx-submit-loading:opacity-75 rounded-lg py-4 px-6",
-        "text-xl font-black leading-6 text-white active:text-white/80 border",
+        "phx-submit-loading:opacity-75 rounded-lg px-6 py-4",
+        "text-xl font-black text-white active:text-white/80 border",
         @class,
         (@hue != nil && "bg-#{@hue}-600 hover:bg-#{@hue}-500 border-#{@hue}-600") ||
           "bg-zinc-800 hover:bg-zinc-700"
@@ -247,8 +247,8 @@ defmodule PixelgameWeb.CoreComponents do
     ~H"""
     <.link
       class={[
-        "inline-flex justify-center phx-submit-loading:opacity-75 rounded-lg py-4 px-6",
-        "text-xl font-black leading-6 text-white active:text-white/80 border",
+        "inline-flex justify-center phx-submit-loading:opacity-75 rounded-lg px-6 py-4",
+        "text-xl font-black text-white active:text-white/80 border",
         @class,
         (@hue != nil && "bg-#{@hue}-600 hover:bg-#{@hue}-500 border-#{@hue}-600") ||
           "bg-zinc-800 hover:bg-zinc-700"
@@ -260,7 +260,7 @@ defmodule PixelgameWeb.CoreComponents do
     """
   end
 
-  attr :selected, :boolean, default: false
+  attr :hue, :string, default: nil
   attr :rest, :global, include: ~w(disabled form name value)
 
   slot :inner_block, required: true
@@ -270,9 +270,9 @@ defmodule PixelgameWeb.CoreComponents do
     <button
       type="button"
       class={[
-        "phx-submit-loading:opacity-75 rounded-lg px-4 py-4",
-        "font-semibold leading-6 text-white active:text-white/80 border",
-        (@selected && "bg-#{@hue}-600 hover:bg-#{@hue}-500 border-#{@hue}-600") ||
+        "phx-submit-loading:opacity-75 rounded-lg px-4 py-2",
+        "font-semibold text-white active:text-white/80 border",
+        (@hue != nil && "bg-#{@hue}-600 hover:bg-#{@hue}-500 border-#{@hue}-600") ||
           "bg-zinc-800 hover:bg-zinc-700"
       ]}
       {@rest}
@@ -336,7 +336,7 @@ defmodule PixelgameWeb.CoreComponents do
 
     ~H"""
     <div phx-feedback-for={@name} class={@class}>
-      <label class="flex items-center gap-4 text-sm leading-6 text-zinc-600">
+      <label class="flex items-center gap-4 text-sm text-zinc-600">
         <input type="hidden" name={@name} value="false" />
         <input
           type="checkbox"
@@ -376,60 +376,46 @@ defmodule PixelgameWeb.CoreComponents do
     """
   end
 
-  def input(%{type: "textarea"} = assigns) do
+  def input(%{type: "number"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name} class={@class}>
       <.label for={@id}><%= @label %></.label>
-      <textarea
-        id={@id}
-        name={@name}
-        class={[
-          "block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6",
-          "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
-          "min-h-[6rem] border-zinc-300 focus:border-zinc-400",
-          @errors != [] && "border-rose-400 focus:border-rose-400",
-          @input_class
-        ]}
-        {@rest}
-      ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
-      <.error :for={msg <- @errors}><%= msg %></.error>
-    </div>
-    """
-  end
-
-  # Custom range input
-  def input(%{type: "range"} = assigns) do
-    ~H"""
-    <div phx-feedback-for={@name} class={@class}>
-      <label for={@id} class="block font-black text-xl"><%= @label %></label>
-      <input
-        type={@type}
-        name={@name}
-        id={@id}
-        value={@value}
-        class={[
-          "block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6",
-          "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
-          "border-zinc-300 focus:border-zinc-400 accent-white",
-          @errors != [] && "border-rose-400 focus:border-rose-400",
-          @input_class
-        ]}
-        list={@id<>"-list"}
-        {@rest}
-      />
-      <datalist
-        :if={@rest.min && @rest.max}
-        id={@id<>"-list"}
-        class="flex justify-between text-center text-sm"
-      >
-        <option
-          :for={number <- String.to_integer(@rest.min)..String.to_integer(@rest.max)}
-          value={number}
-          label={number}
-          class={["w-[2ch] p-0", number > @value && "text-zinc-500"]}
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class={[
+            "rounded-lg px-4 py-4",
+            "text-white active:text-white/80 border",
+            "bg-zinc-800 hover:bg-zinc-700"
+          ]}
         >
-        </option>
-      </datalist>
+          <.icon name="hero-chevron-left" />
+        </button>
+        <input
+          name={@name}
+          id={@id}
+          value={@value}
+          class={[
+            "font-black text-center",
+            "text-zinc-900 w-full rounded-lg focus:ring-0 text-xl px-6 py-4",
+            "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
+            "border-zinc-300 focus:border-zinc-400",
+            @errors != [] && "border-rose-400 focus:border-rose-400",
+            @input_class
+          ]}
+          {@rest}
+        />
+        <button
+          type="button"
+          class={[
+            "rounded-lg px-4 py-4",
+            "text-white active:text-white/80 border",
+            "bg-zinc-800 hover:bg-zinc-700"
+          ]}
+        >
+          <.icon name="hero-chevron-right" />
+        </button>
+      </div>
       <.error :for={msg <- @errors}><%= msg %></.error>
     </div>
     """
@@ -439,14 +425,14 @@ defmodule PixelgameWeb.CoreComponents do
   def input(assigns) do
     ~H"""
     <div phx-feedback-for={@name} class={@class}>
-      <.label for={@id}><%= @label %></.label>
+      <.label :if={@label} for={@id}><%= @label %></.label>
       <input
         type={@type}
         name={@name}
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
-          "block w-full rounded-lg text-zinc-900 focus:ring-0 text-xl leading-6 px-6 py-4",
+          "block w-full rounded-lg text-zinc-900 focus:ring-0 text-xl px-6 py-4",
           "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
           "border-zinc-300 focus:border-zinc-400",
           @errors != [] && "border-rose-400 focus:border-rose-400",
@@ -467,7 +453,7 @@ defmodule PixelgameWeb.CoreComponents do
 
   def label(assigns) do
     ~H"""
-    <label for={@for} class="block text-sm font-semibold leading-6">
+    <label for={@for} class="block text-xl font-black mb-1 text-center">
       <%= render_slot(@inner_block) %>
     </label>
     """
@@ -480,35 +466,10 @@ defmodule PixelgameWeb.CoreComponents do
 
   def error(assigns) do
     ~H"""
-    <p class="mt-3 flex gap-3 text-sm leading-6 text-rose-600 phx-no-feedback:hidden">
+    <p class="mt-3 flex gap-3 text-sm text-rose-600 phx-no-feedback:hidden">
       <.icon name="hero-exclamation-circle-mini" class="mt-0.5 h-5 w-5 flex-none" />
       <%= render_slot(@inner_block) %>
     </p>
-    """
-  end
-
-  @doc """
-  Renders a header with title.
-  """
-  attr :class, :string, default: nil
-
-  slot :inner_block, required: true
-  slot :subtitle
-  slot :actions
-
-  def header(assigns) do
-    ~H"""
-    <header class={[@actions != [] && "flex items-center justify-between gap-6", @class]}>
-      <div>
-        <h1 class="text-lg font-semibold leading-8 text-zinc-800">
-          <%= render_slot(@inner_block) %>
-        </h1>
-        <p :if={@subtitle != []} class="mt-2 text-sm leading-6 text-zinc-600">
-          <%= render_slot(@subtitle) %>
-        </p>
-      </div>
-      <div class="flex-none"><%= render_slot(@actions) %></div>
-    </header>
     """
   end
 
@@ -546,7 +507,7 @@ defmodule PixelgameWeb.CoreComponents do
     ~H"""
     <div class="overflow-y-auto px-4 sm:overflow-visible sm:px-0">
       <table class="w-[40rem] mt-11 sm:w-full">
-        <thead class="text-sm text-left leading-6 text-zinc-500">
+        <thead class="text-sm text-left text-zinc-500">
           <tr>
             <th :for={col <- @col} class="p-0 pr-6 pb-4 font-normal"><%= col[:label] %></th>
             <th class="relative p-0 pb-4"><span class="sr-only"><%= gettext("Actions") %></span></th>
@@ -555,7 +516,7 @@ defmodule PixelgameWeb.CoreComponents do
         <tbody
           id={@id}
           phx-update={match?(%Phoenix.LiveView.LiveStream{}, @rows) && "stream"}
-          class="relative divide-y divide-zinc-100 border-t border-zinc-200 text-sm leading-6 text-zinc-700"
+          class="relative divide-y divide-zinc-100 border-t border-zinc-200 text-sm text-zinc-700"
         >
           <tr :for={row <- @rows} id={@row_id && @row_id.(row)} class="group hover:bg-zinc-50">
             <td
@@ -575,7 +536,7 @@ defmodule PixelgameWeb.CoreComponents do
                 <span class="absolute -inset-y-px -right-4 left-0 group-hover:bg-zinc-50 sm:rounded-r-xl" />
                 <span
                   :for={action <- @action}
-                  class="relative ml-4 font-semibold leading-6 text-zinc-900 hover:text-zinc-700"
+                  class="relative ml-4 font-semibold text-zinc-900 hover:text-zinc-700"
                 >
                   <%= render_slot(action, @row_item.(row)) %>
                 </span>
@@ -606,7 +567,7 @@ defmodule PixelgameWeb.CoreComponents do
     ~H"""
     <div class="mt-14">
       <dl class="-my-4 divide-y divide-zinc-100">
-        <div :for={item <- @item} class="flex gap-4 py-4 text-sm leading-6 sm:gap-8">
+        <div :for={item <- @item} class="flex gap-4 py-4 text-sm sm:gap-8">
           <dt class="w-1/4 flex-none text-zinc-500"><%= item.title %></dt>
           <dd class="text-zinc-700"><%= render_slot(item) %></dd>
         </div>
@@ -628,10 +589,7 @@ defmodule PixelgameWeb.CoreComponents do
   def back(assigns) do
     ~H"""
     <div class="mt-16">
-      <.link
-        navigate={@navigate}
-        class="text-sm font-semibold leading-6 text-zinc-900 hover:text-zinc-700"
-      >
+      <.link navigate={@navigate} class="text-sm font-semibold text-zinc-900 hover:text-zinc-700">
         <.icon name="hero-arrow-left-solid" class="h-3 w-3" />
         <%= render_slot(@inner_block) %>
       </.link>

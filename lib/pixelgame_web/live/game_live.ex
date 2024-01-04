@@ -9,9 +9,10 @@ defmodule PixelgameWeb.GameLive do
      socket
      |> assign(
        client_info: %{code: "****", id: nil},
-       game: %TicTacToe{},
        settings: to_form(%{"board_size" => 3, "win_length" => 3, "preset" => "custom"})
-     )}
+     )
+     |> setup_game_assigns(%TicTacToe{})
+     |> setup_settings(%TicTacToe{})}
   end
 
   @salt Application.compile_env(:pixelgame, PixelgameWeb.Endpoint)[:live_view][:signing_salt]
@@ -81,11 +82,9 @@ defmodule PixelgameWeb.GameLive do
     game = Pixelgame.Games.Server.get_state(client_info.code)
 
     socket
-    |> assign(
-      game: game,
-      client_info: client_info,
-      ready_count: Map.values(game.players) |> Enum.count(fn player -> player.ready end)
-    )
+    |> assign(client_info: client_info)
+    |> setup_game_assigns(game)
+    |> setup_settings(game)
     |> push_event("set", %{
       key: @store_key,
       data: Phoenix.Token.encrypt(PixelgameWeb.Endpoint, @salt, client_info)
@@ -163,29 +162,50 @@ defmodule PixelgameWeb.GameLive do
   end
 
   def handle_info({:game_state, %TicTacToe{} = state}, socket) do
-    %{game: game} = socket.assigns
-
-    socket =
-      case state.status do
-        :playing when game.status == :playing and state.turn != game.turn ->
-          socket |> push_event("startTimer", %{s: 60})
-
-        :playing when game.status == :waiting ->
-          socket |> push_event("startTimer", %{s: 60})
-
-        :done when game.status == :playing ->
-          socket |> push_event("stopTimer", %{})
-
-        _ ->
-          socket
-      end
-
     {:noreply,
      socket
-     |> assign(
-       game: state,
-       ready_count: Map.values(state.players) |> Enum.count(fn player -> player.ready end)
-     )}
+     |> setup_timer(state)
+     |> setup_settings(state)
+     |> setup_game_assigns(state)}
+  end
+
+  def setup_game_assigns(socket, %TicTacToe{} = state) do
+    socket
+    |> assign(
+      game: state,
+      ready_count: Map.values(state.players) |> Enum.count(fn player -> player.ready end),
+      sorted_players: Map.values(state.players) |> Enum.sort(fn p1, p2 -> p1.order < p2.order end)
+    )
+  end
+
+  def setup_timer(socket, %TicTacToe{} = state) do
+    %{game: game} = socket.assigns
+
+    case state.status do
+      :playing when game.status == :playing and state.turn != game.turn ->
+        socket |> push_event("startTimer", %{s: 60})
+
+      :playing when game.status == :waiting ->
+        socket |> push_event("startTimer", %{s: 60})
+
+      :done when game.status == :playing ->
+        socket |> push_event("stopTimer", %{})
+
+      _ ->
+        socket
+    end
+  end
+
+  def setup_settings(socket, %TicTacToe{} = state) do
+    preset =
+      case state.win_length do
+        3 when state.board_size == 3 -> :tictactoe
+        4 when state.board_size == 7 -> :connect4
+        5 when state.board_size == 15 -> :gomoku
+        _ -> :custom
+      end
+
+    socket |> assign(:preset, preset)
   end
 
   def render(assigns) do
@@ -218,7 +238,7 @@ defmodule PixelgameWeb.GameLive do
         </div>
         <ul class="flex flex-wrap gap-4">
           <li
-            :for={player <- Map.values(@game.players)}
+            :for={player <- @sorted_players}
             class={[
               "rounded p-4 flex-1 flex flex-col justify-between bg-fuchsia-900",
               player.id == @client_info.id && "outline"
@@ -239,17 +259,21 @@ defmodule PixelgameWeb.GameLive do
         <div class="bg-zinc-900 border p-4 rounded-lg">
           <.form for={@settings} class="flex flex-col gap-4" phx-change="change_settings">
             <div>
-              <div class="block font-black text-xl mb-1">Presets</div>
-              <div class="flex flex-wrap gap-2">
-                <.enum_button class="text-center">
+              <div class="block font-black text-xl mb-1 text-center">Presets</div>
+              <div class="flex flex-wrap gap-2 justify-center">
+                <.enum_button hue={if @preset == :custom, do: "amber"}>
                   <.icon name="hero-cog-6-tooth" class="m-auto" />
                   <div>Custom</div>
                 </.enum_button>
-                <.enum_button>
+                <.enum_button hue={if @preset == :tictactoe, do: "amber"}>
                   <.icon name="hero-hashtag" class="m-auto" />
                   <div>Tic-tac-toe</div>
                 </.enum_button>
-                <.enum_button>
+                <.enum_button hue={if @preset == :connect4, do: "amber"}>
+                  <.icon name="hero-table-cells" class="m-auto" />
+                  <div>Connect 4</div>
+                </.enum_button>
+                <.enum_button hue={if @preset == :gomoku, do: "amber"}>
                   <.icon name="hero-currency-yen" class="m-auto" />
                   <div>Gomoku</div>
                 </.enum_button>
@@ -257,7 +281,7 @@ defmodule PixelgameWeb.GameLive do
             </div>
             <.input
               field={@settings["board_size"]}
-              type="range"
+              type="number"
               label="Board size"
               min="3"
               max="20"
@@ -265,7 +289,7 @@ defmodule PixelgameWeb.GameLive do
             />
             <.input
               field={@settings["win_length"]}
-              type="range"
+              type="number"
               label="Win length"
               min="3"
               max="20"
@@ -309,7 +333,7 @@ defmodule PixelgameWeb.GameLive do
         </div>
         <ul class="flex flex-wrap gap-4">
           <li
-            :for={player <- Map.values(@game.players)}
+            :for={player <- @sorted_players}
             class={[
               "rounded p-2 flex-1 flex flex-col justify-between",
               player.id == @client_info.id && "outline",

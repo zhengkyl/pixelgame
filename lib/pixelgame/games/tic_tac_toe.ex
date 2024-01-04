@@ -6,7 +6,7 @@ defmodule Pixelgame.Games.TicTacToe do
             status: :waiting,
             players: %{},
             min_players: 2,
-            max_players: 2,
+            max_players: 8,
             turn: 0,
             pieces: %{},
             board_size: 3,
@@ -81,7 +81,8 @@ defmodule Pixelgame.Games.TicTacToe do
            | players:
                Map.put(players, new_player.id, %Player{
                  new_player
-                 | order: map_size(players),
+                 | # store join order before randomized in start
+                   order: map_size(players),
                    shape: shape
                }),
              pieces: Map.put(pieces, new_player.id, MapSet.new())
@@ -108,8 +109,16 @@ defmodule Pixelgame.Games.TicTacToe do
   def start(%TicTacToe{status: :waiting, players: players} = state)
       when map_size(players) >= state.min_players do
     case Map.values(players) |> Enum.all?(fn player -> player.ready end) do
-      true -> {:ok, %TicTacToe{state | status: :playing}}
-      false -> {:error, "Not all players ready to start game"}
+      true ->
+        players =
+          players
+          |> Enum.zip(Enum.shuffle(0..(map_size(players) - 1)))
+          |> Map.new(fn {{id, player}, order} -> {id, %Player{player | order: order}} end)
+
+        {:ok, %TicTacToe{state | status: :playing, players: players}}
+
+      false ->
+        {:error, "Not all players ready to start game"}
     end
   end
 
