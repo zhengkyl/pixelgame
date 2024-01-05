@@ -1,22 +1,19 @@
-// https://fly.io/phoenix-files/saving-and-restoring-liveview-state/
+import JSConfetti from "js-confetti";
 
 export const GameHooks = {
+  // https://fly.io/phoenix-files/saving-and-restoring-liveview-state/
   mounted() {
-    this.handleEvent("set", (obj) => {
-      console.log("set", obj);
-      sessionStorage.setItem(obj.key, obj.data);
+    this.handleEvent("set", ({ key, data }) => {
+      sessionStorage.setItem(key, data);
     });
-    this.handleEvent("get", (obj) => {
-      console.log("get", obj);
-      this.pushEvent(obj.event, sessionStorage.getItem(obj.key));
+    this.handleEvent("get", ({ key, event }) => {
+      this.pushEvent(event, sessionStorage.getItem(key));
     });
-    this.handleEvent("clear", (obj) => {
-      console.log("clear", obj);
-      sessionStorage.removeItem(obj.key);
+    this.handleEvent("clear", ({ key }) => {
+      sessionStorage.removeItem(key);
     });
-    this.handleEvent("replaceHistory", (obj) => {
-      console.log("replace state", obj);
-      window.history.replaceState(obj.state, "", obj.url);
+    this.handleEvent("replaceHistory", ({ state, url }) => {
+      window.history.replaceState(state, "", url);
     });
   },
 };
@@ -52,9 +49,9 @@ export const Countdown = {
 export const Timer = {
   mounted() {
     let timeout;
-    this.handleEvent("startTimer", (obj) => {
+    this.handleEvent("startTimer", ({ s }) => {
       clearTimeout(timeout);
-      let seconds = obj.s;
+      let seconds = s;
 
       const run = () => {
         this.el.textContent =
@@ -66,6 +63,29 @@ export const Timer = {
     });
     this.handleEvent("stopTimer", () => {
       clearTimeout(timeout);
+    });
+  },
+};
+
+const winEmojis = ["👑", "🥇", "⭐", "🎉", "🥳"];
+
+const loseEmojis = ["💀", "🗿", "🪦", "🥀", "😵"];
+
+export const Announcement = {
+  mounted() {
+    const jsConfetti = new JSConfetti();
+
+    this.handleEvent("announce", ({ msg, win }) => {
+      jsConfetti.addConfetti({
+        emojis: win ? winEmojis : loseEmojis,
+      });
+      this.el.textContent = msg;
+      this.el.style.display = "block";
+      this.el.offsetHeight; // trigger reflow -> transition runs
+      this.el.style.opacity = 0;
+      setTimeout(() => {
+        this.el.style = "";
+      }, 5000);
     });
   },
 };

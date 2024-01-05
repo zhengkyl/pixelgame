@@ -185,19 +185,43 @@ defmodule PixelgameWeb.GameLive do
   def setup_game_assigns(socket, %TicTacToe{} = state) do
     sorted_players = Map.values(state.players) |> Enum.sort(fn p1, p2 -> p1.order < p2.order end)
 
+    current_player =
+      (map_size(state.players) > 0 &&
+         Enum.at(sorted_players, rem(state.turn, map_size(state.players)))) || nil
+
+    game_result =
+      case(state.status) do
+        :playing ->
+          case current_player do
+            %Games.Player{id: id} when id == socket.assigns.client_info.id ->
+              "YOUR TURN"
+
+            player ->
+              (player.name |> String.upcase()) <> "'S TURN"
+          end
+
+        :done ->
+          case current_player do
+            _ when not is_map_key(state.pieces, :win) -> "DRAW"
+            _ -> (current_player.name |> String.upcase()) <> " WINS"
+          end
+
+        :waiting ->
+          nil
+      end
+
     socket
     |> assign(
       game: state,
       ready_count: Map.values(state.players) |> Enum.count(fn player -> player.ready end),
       sorted_players: sorted_players,
-      current_player:
-        (map_size(state.players) > 0 &&
-           Enum.at(sorted_players, rem(state.turn, map_size(state.players)))) || nil
+      current_player: current_player,
+      game_result: game_result
     )
   end
 
   def setup_timer(socket, %TicTacToe{} = state) do
-    %{game: game} = socket.assigns
+    %{game: game, client_info: client_info, current_player: current_player} = socket.assigns
 
     case state.status do
       :playing when game.status == :playing and state.turn != game.turn ->
@@ -207,7 +231,21 @@ defmodule PixelgameWeb.GameLive do
         socket |> push_event("startTimer", %{s: 60})
 
       :done when game.status == :playing ->
-        socket |> push_event("stopTimer", %{})
+        info =
+          case current_player do
+            _ when not is_map_key(state.pieces, :win) ->
+              %{msg: "DRAW", win: false}
+
+            %Games.Player{id: id} when id == client_info.id ->
+              %{msg: "VICTORY", win: true}
+
+            %Games.Player{} ->
+              %{msg: "DEFEAT", win: false}
+          end
+
+        socket
+        |> push_event("stopTimer", %{})
+        |> push_event("announce", info)
 
       _ ->
         socket
@@ -333,6 +371,12 @@ defmodule PixelgameWeb.GameLive do
       </div>
       <div :if={@game.status !== :waiting} class="flex flex-col gap-4">
         <div
+          id="announcement"
+          class="hidden bg-black/80 fixed left-0 right-0 top-1/3 p-16 transition-opacity ease-in z-10 text-5xl font-black text-center duration-[3s]"
+          phx-hook="Announcement"
+        >
+        </div>
+        <div
           id="game_header"
           class="flex justify-between"
           phx-update={(@game.status == :done && "ignore") || "replace"}
@@ -343,23 +387,8 @@ defmodule PixelgameWeb.GameLive do
               <%= @game.turn + 1 %>
             </span>
           </div>
-          <div :if={@game.status == :playing} class="text-xl font-black [flex:2] text-center">
-            <%= case @current_player do %>
-              <% %Games.Player{id: id} when id == @client_info.id -> %>
-                YOUR TURN
-              <% player -> %>
-                <%= player.name |> String.upcase() %>'S TURN
-            <% end %>
-          </div>
-          <div :if={@game.status == :done} class="text-xl font-black [flex:2] text-center">
-            <%= case @current_player do %>
-              <% _ when not is_map_key(@game.pieces, :win) -> %>
-                DRAW
-              <% %Games.Player{id: id} when id == @client_info.id -> %>
-                YOU WIN
-              <% player -> %>
-                <%= player.name |> String.upcase() %> WINS
-            <% end %>
+          <div class="text-xl font-black [flex:2] text-center min-h-[3.5rem]">
+            <%= @game_result %>
           </div>
 
           <div id="timer" class="text-xl flex-1 text-right" phx-hook="Timer"></div>
