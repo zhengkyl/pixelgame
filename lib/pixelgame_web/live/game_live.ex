@@ -166,15 +166,33 @@ defmodule PixelgameWeb.GameLive do
      socket
      |> setup_timer(state)
      |> setup_settings(state)
-     |> setup_game_assigns(state)}
+     |> setup_game_assigns(state)
+     |> endgame_fix(state)}
+  end
+
+  def endgame_fix(socket, %TicTacToe{} = state) do
+    %{game: game} = socket.assigns
+
+    if game.status == :done && state.status == :done &&
+         map_size(game.players) != map_size(state.players) do
+      socket
+      |> assign(game: %TicTacToe{state | pieces: game.pieces})
+    else
+      socket
+    end
   end
 
   def setup_game_assigns(socket, %TicTacToe{} = state) do
+    sorted_players = Map.values(state.players) |> Enum.sort(fn p1, p2 -> p1.order < p2.order end)
+
     socket
     |> assign(
       game: state,
       ready_count: Map.values(state.players) |> Enum.count(fn player -> player.ready end),
-      sorted_players: Map.values(state.players) |> Enum.sort(fn p1, p2 -> p1.order < p2.order end)
+      sorted_players: sorted_players,
+      current_player:
+        (map_size(state.players) > 0 &&
+           Enum.at(sorted_players, rem(state.turn, map_size(state.players)))) || nil
     )
   end
 
@@ -314,21 +332,36 @@ defmodule PixelgameWeb.GameLive do
         </div>
       </div>
       <div :if={@game.status !== :waiting} class="flex flex-col gap-4">
-        <div class="flex justify-between">
+        <div
+          id="game_header"
+          class="flex justify-between"
+          phx-update={(@game.status == :done && "ignore") || "replace"}
+        >
           <div class="flex-1">
             <span class="text-xl">Turn </span>
             <span class="text-xl font-black">
               <%= @game.turn + 1 %>
             </span>
           </div>
-          <div class="text-xl font-black [flex:2] text-center">
-            <%= case Games.TicTacToe.verify_player_turn(@game, @game.players[@client_info.id]) do %>
-              <% :ok -> %>
+          <div :if={@game.status == :playing} class="text-xl font-black [flex:2] text-center">
+            <%= case @current_player do %>
+              <% %Games.Player{id: id} when id == @client_info.id -> %>
                 YOUR TURN
-              <% _ -> %>
-                OPPONENT'S TURN
+              <% player -> %>
+                <%= player.name |> String.upcase() %>'S TURN
             <% end %>
           </div>
+          <div :if={@game.status == :done} class="text-xl font-black [flex:2] text-center">
+            <%= case @current_player do %>
+              <% _ when not is_map_key(@game.pieces, :win) -> %>
+                DRAW
+              <% %Games.Player{id: id} when id == @client_info.id -> %>
+                YOU WIN
+              <% player -> %>
+                <%= player.name |> String.upcase() %> WINS
+            <% end %>
+          </div>
+
           <div id="timer" class="text-xl flex-1 text-right" phx-hook="Timer"></div>
         </div>
         <ul class="flex flex-wrap gap-4">
@@ -345,19 +378,25 @@ defmodule PixelgameWeb.GameLive do
             </span>
           </li>
         </ul>
-        <div class={"grid grid-cols-#{@game.board_size} gap-2"}>
+        <div
+          id="game_grid"
+          class={"grid grid-cols-#{@game.board_size} gap-2"}
+          phx-update={(@game.status == :done && "ignore") || "replace"}
+        >
           <%= for x <- 1..@game.board_size do %>
             <%= for y <- 1..@game.board_size do %>
               <div
                 class={[
                   "border rounded-lg aspect-square",
-                  "cursor-pointer hover:bg-white/10"
+                  "cursor-pointer",
+                  (Map.has_key?(@game.pieces, :win) && MapSet.member?(@game.pieces[:win], {x, y}) &&
+                     "bg-amber-600 hover:bg-amber-500") || "hover:bg-white/10"
                 ]}
                 phx-click="move"
                 phx-value-row={x}
                 phx-value-col={y}
               >
-                <%= for id <- Map.keys(@game.pieces) do %>
+                <%= for id <- Map.keys(@game.players) do %>
                   <%= if MapSet.member?(@game.pieces[id], {x, y}) do %>
                     <%= case @game.players[id].shape do %>
                       <% :cross -> %>

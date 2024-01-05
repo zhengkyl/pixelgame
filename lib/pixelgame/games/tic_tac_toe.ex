@@ -48,7 +48,7 @@ defmodule Pixelgame.Games.TicTacToe do
       | status: :waiting,
         turn: 0,
         players: Map.new(state.players, fn {id, p} -> {id, %Player{p | ready: false}} end),
-        pieces: Map.new(Map.keys(state.pieces), fn id -> {id, MapSet.new()} end)
+        pieces: Map.new(Map.keys(state.players), fn id -> {id, MapSet.new()} end)
     }
     |> reset_timer()
   end
@@ -172,29 +172,40 @@ defmodule Pixelgame.Games.TicTacToe do
   end
 
   defp check_win(%TicTacToe{} = state, %Player{} = player) do
-    case is_win?(state, player) do
-      true -> %TicTacToe{state | status: :done}
-      false -> state
+    case winning_tiles(state, player) do
+      [_ | _] = winning_tiles ->
+        %TicTacToe{
+          state
+          | status: :done,
+            pieces: Map.put(state.pieces, :win, MapSet.new(winning_tiles))
+        }
+
+      [] ->
+        state
     end
   end
 
   @directions [{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}]
 
-  defp is_win?(%TicTacToe{pieces: pieces, win_length: win_length}, %Player{id: id}) do
-    Enum.any?(@directions, fn {dx, dy} ->
+  defp winning_tiles(%TicTacToe{pieces: pieces, win_length: win_length}, %Player{id: id}) do
+    Enum.flat_map(@directions, fn {dx, dy} ->
       pieces[id]
       |> Enum.sort()
       |> Enum.reduce_while(%{}, fn {x, y}, acc ->
         length = 1 + Map.get(acc, {x + dx, y + dy}, 0)
 
         case length do
-          ^win_length -> {:halt, true}
-          _ -> {:cont, Map.put(acc, {x, y}, length)}
+          ^win_length ->
+            {:halt,
+             0..(win_length - 1) |> Enum.map(fn dist -> {x + dist * dx, y + dist * dy} end)}
+
+          _ ->
+            {:cont, Map.put(acc, {x, y}, length)}
         end
       end)
       |> case do
-        true -> true
-        _ -> false
+        [_ | _] = list -> list
+        _ -> []
       end
     end)
   end
