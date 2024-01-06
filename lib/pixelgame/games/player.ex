@@ -17,11 +17,6 @@ defmodule Pixelgame.Games.Player do
     field :ready, :boolean, default: false
   end
 
-  @type t :: %Player{
-          name: String.t(),
-          id: integer()
-        }
-
   def changeset(player, attrs) do
     player
     |> cast(attrs, [:name, :id, :color])

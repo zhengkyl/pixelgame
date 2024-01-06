@@ -68,8 +68,7 @@ module.exports = {
       let iconsDir = path.join(__dirname, "./vendor/heroicons/optimized");
       let values = {};
       let icons = [
-        ["", "/24/outline"],
-        ["-solid", "/24/solid"],
+        ["", "/24/solid"],
         ["-mini", "/20/solid"],
       ];
       icons.forEach(([suffix, dir]) => {

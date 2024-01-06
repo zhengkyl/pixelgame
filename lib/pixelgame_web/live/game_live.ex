@@ -9,7 +9,7 @@ defmodule PixelgameWeb.GameLive do
      socket
      |> assign(
        client_info: %{code: "****", id: nil},
-       settings: to_form(%{"board_size" => 3, "win_length" => 3, "preset" => "custom"})
+       settings: to_form(Games.Settings.changeset(%Games.Settings{}, %{}))
      )
      |> setup_game_assigns(%TicTacToe{})
      |> setup_settings(%TicTacToe{})}
@@ -110,8 +110,19 @@ defmodule PixelgameWeb.GameLive do
     {:noreply, socket |> put_flash(:error, "Not currently in game.") |> redirect(to: ~p"/")}
   end
 
-  def handle_event("change_settings", params, socket) do
-    IO.inspect(params)
+  def handle_event("change_settings", %{"settings" => params}, socket) do
+    form =
+      %Games.Settings{}
+      |> Games.Settings.changeset(params)
+      |> Map.put(:action, :insert)
+      |> to_form()
+
+    {:noreply, assign(socket, settings: form)}
+  end
+
+  def handle_event("save_settings", params, socket) do
+    IO.inspect(socket.assigns.settings, label: "old")
+    IO.inspect(params, label: "new")
     {:noreply, socket}
   end
 
@@ -311,47 +322,70 @@ defmodule PixelgameWeb.GameLive do
             </div>
           </li>
         </ul>
-        <div class="text-3xl font-black text-center">Settings</div>
-        <div class="bg-zinc-900 border p-4 rounded-lg">
-          <.form for={@settings} class="flex flex-col gap-4" phx-change="change_settings">
-            <div>
-              <div class="block font-black text-xl mb-1 text-center">Presets</div>
-              <div class="flex flex-wrap gap-2 justify-center">
-                <.enum_button hue={if @preset == :custom, do: "amber"}>
-                  <.icon name="hero-cog-6-tooth" class="m-auto" />
-                  <div>Custom</div>
-                </.enum_button>
-                <.enum_button hue={if @preset == :tictactoe, do: "amber"}>
-                  <.icon name="hero-hashtag" class="m-auto" />
-                  <div>Tic-tac-toe</div>
-                </.enum_button>
-                <.enum_button hue={if @preset == :connect4, do: "amber"}>
-                  <.icon name="hero-table-cells" class="m-auto" />
-                  <div>Connect 4</div>
-                </.enum_button>
-                <.enum_button hue={if @preset == :gomoku, do: "amber"}>
-                  <.icon name="hero-currency-yen" class="m-auto" />
-                  <div>Gomoku</div>
-                </.enum_button>
-              </div>
+        <div>
+          <div class="text-3xl font-black text-center">Settings</div>
+          <div class="flex justify-between">
+            <div class="font-semibold px-4 py-2 gap-x-4 grid grid-cols-4 justify-items-center items-center border rounded-lg bg-zinc-800">
+              <div class="text-center">Board size</div>
+              <div class="text-center">Win length</div>
+              <div class="text-center">Min players</div>
+              <div class="text-center">Max players</div>
+              <div class="font-black text-xl">3</div>
+              <div class="font-black text-xl">3</div>
+              <div class="font-black text-xl">2</div>
+              <div class="font-black text-xl">8</div>
             </div>
-            <.input
-              field={@settings["board_size"]}
-              type="number"
-              label="Board size"
-              min="3"
-              max="20"
-              step="1"
-            />
-            <.input
-              field={@settings["win_length"]}
-              type="number"
-              label="Win length"
-              min="3"
-              max="20"
-              step="1"
-            />
-          </.form>
+            <.enum_button phx-click={show_modal("settings_modal")}>
+              <div>Edit</div>
+              <.icon name="hero-cog-6-tooth" class="m-auto" />
+            </.enum_button>
+          </div>
+
+          <.modal id="settings_modal">
+            <.form
+              for={@settings}
+              class="flex flex-col gap-4"
+              phx-change="change_settings"
+              phx-submit="save_settings"
+            >
+              <div>
+                <div class="font-black text-xl mb-1">Presets</div>
+                <div class="flex flex-wrap gap-2">
+                  <.enum_button hue={if @preset == :custom, do: "amber"}>
+                    <.icon name="hero-cog-6-tooth" class="m-auto" />
+                    <div>Custom</div>
+                  </.enum_button>
+                  <.enum_button hue={if @preset == :tictactoe, do: "amber"}>
+                    <.icon name="hero-hashtag" class="m-auto" />
+                    <div>Tic-tac-toe</div>
+                  </.enum_button>
+                  <.enum_button hue={if @preset == :connect4, do: "amber"}>
+                    <.icon name="hero-table-cells" class="m-auto" />
+                    <div>Connect 4</div>
+                  </.enum_button>
+                  <.enum_button hue={if @preset == :gomoku, do: "amber"}>
+                    <.icon name="hero-currency-yen" class="m-auto" />
+                    <div>Gomoku</div>
+                  </.enum_button>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <div class="text-xl font-black">Board size</div>
+                  <div>Between 3 and 20 (inclusive)</div>
+                </div>
+                <.input field={@settings[:board_size]} type="number" min="3" max="20" step="1" />
+                <div>
+                  <div class="text-xl font-black">Win length</div>
+                  <div>Between 3 and board size (inclusive)</div>
+                </div>
+                <.input field={@settings[:win_length]} type="number" min="3" max="20" step="1" />
+              </div>
+              <.button type="submit">
+                Apply
+              </.button>
+            </.form>
+          </.modal>
         </div>
 
         <div class="flex gap-4">
