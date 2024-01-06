@@ -293,14 +293,26 @@ defmodule PixelgameWeb.GameLive do
             Cancel
           </.button>
         </div>
-        <div class="grid grid-cols-2 justify-items-center mx-16">
-          <div class="text-sm">Code</div>
+        <div class="grid grid-cols-3 justify-items-center">
           <div class="text-sm">Players</div>
-          <div class="text-2xl font-black">
-            <%= @client_info.code %>
-          </div>
+          <div class="text-sm">Code</div>
+          <button
+            id="copy_link_button"
+            class="justify-self-end self-center row-span-2 inline-flex items-center gap-1 font-bold rounded-lg p-2 bg-zinc-800 hover:bg-zinc-700 active:text-white/80 border"
+            phx-update="ignore"
+            phx-click={
+              JS.dispatch("pixelgame:clipcopy",
+                detail: %{text: "localhost:4000/game?code=#{@client_info.code}"}
+              )
+            }
+          >
+            Copy link <.icon name="hero-link-mini" />
+          </button>
           <div class="text-2xl font-black">
             <%= map_size(@game.players) %> / <%= @game.max_players %>
+          </div>
+          <div class="text-2xl font-black">
+            <%= @client_info.code %>
           </div>
         </div>
         <ul class="flex flex-wrap gap-4">
@@ -463,13 +475,33 @@ defmodule PixelgameWeb.GameLive do
                   <%= if MapSet.member?(@game.pieces[id], {x, y}) do %>
                     <%= case @game.players[id].shape do %>
                       <% :cross -> %>
-                        <.cross stroke={@game.players[id].color} />
+                        <.cross
+                          stroke={@game.players[id].color}
+                          id={"game_tile_#{x}_#{y}"}
+                          phx-hook="GameTile"
+                          class="animate-pop"
+                        />
                       <% :circle -> %>
-                        <.circle stroke={@game.players[id].color} />
+                        <.circle
+                          stroke={@game.players[id].color}
+                          id={"game_tile_#{x}_#{y}"}
+                          phx-hook="GameTile"
+                          class="animate-pop"
+                        />
                       <% :square -> %>
-                        <.square stroke={@game.players[id].color} />
+                        <.square
+                          stroke={@game.players[id].color}
+                          id={"game_tile_#{x}_#{y}"}
+                          phx-hook="GameTile"
+                          class="animate-pop"
+                        />
                       <% :triangle -> %>
-                        <.triangle stroke={@game.players[id].color} />
+                        <.triangle
+                          stroke={@game.players[id].color}
+                          id={"game_tile_#{x}_#{y}"}
+                          phx-hook="GameTile"
+                          class="animate-pop"
+                        />
                     <% end %>
                   <% end %>
                 <% end %>

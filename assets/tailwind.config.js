@@ -8,6 +8,7 @@ const path = require("path");
 module.exports = {
   content: ["./js/**/*.js", "../lib/*_web.ex", "../lib/*_web/**/*.*ex"],
   safelist: [
+    "text-green-600",
     {
       pattern: /bg-(green|sky|purple|yellow|amber)-600/,
     },
@@ -29,6 +30,16 @@ module.exports = {
       },
       colors: {
         brand: "#FAD63F",
+      },
+      keyframes: {
+        pop: {
+          "0%": { transform: "scale(0)" },
+          "60%": { transform: "scale(1.2)" },
+          "100%": { transform: "scale(1)" },
+        },
+      },
+      animation: {
+        pop: "pop 300ms ease-in-out",
       },
     },
   },

@@ -76,16 +76,33 @@ export const Announcement = {
     const jsConfetti = new JSConfetti();
 
     this.handleEvent("announce", ({ msg, win }) => {
-      jsConfetti.addConfetti({
-        emojis: win ? winEmojis : loseEmojis,
-      });
-      this.el.textContent = msg;
-      this.el.style.display = "block";
-      this.el.offsetHeight; // trigger reflow -> transition runs
-      this.el.style.opacity = 0;
+      // gross but delay feels better
       setTimeout(() => {
-        this.el.style = "";
-      }, 5000);
+        const audio = new Audio(
+          win ? "/sounds/victory.ogg" : "/sounds/defeat.ogg"
+        );
+        audio.play();
+        jsConfetti.addConfetti({
+          emojis: win ? winEmojis : loseEmojis,
+        });
+        this.el.textContent = msg;
+        this.el.style.display = "block";
+        this.el.offsetHeight; // trigger reflow -> transition runs
+        this.el.style.opacity = 0;
+        setTimeout(() => {
+          this.el.style = "";
+        }, 5000);
+      }, 500);
     });
+  },
+};
+
+const sounds = ["pop1.ogg", "pop2.ogg", "pop3.ogg"];
+
+export const GameTile = {
+  mounted() {
+    const sound = sounds[Math.floor(Math.random() * sounds.length)];
+    const audio = new Audio(`/sounds/${sound}`);
+    audio.play();
   },
 };
