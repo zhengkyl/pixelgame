@@ -204,7 +204,8 @@ defmodule PixelgameWeb.CoreComponents do
   attr :type, :string, default: nil
   attr :class, :string, default: nil
   attr :hue, :string, default: nil
-  attr :rest, :global, include: ~w(disabled form name value)
+  attr :disabled, :boolean, default: false
+  attr :rest, :global, include: ~w(form name value)
 
   slot :inner_block, required: true
 
@@ -212,12 +213,15 @@ defmodule PixelgameWeb.CoreComponents do
     ~H"""
     <button
       type={@type}
+      disabled={@disabled || nil}
       class={[
         "phx-submit-loading:opacity-75 rounded-lg px-6 py-4",
-        "text-xl font-black text-white active:text-white/80 border",
+        "text-xl font-black border",
+        (@disabled && "bg-zinc-800 text-zinc-600") || "text-white active:text-white/80",
         @class,
-        (@hue != nil && "bg-#{@hue}-600 hover:bg-#{@hue}-500 border-#{@hue}-600") ||
-          "bg-zinc-800 hover:bg-zinc-700"
+        !@disabled &&
+          ((@hue != nil && "bg-#{@hue}-600 hover:bg-#{@hue}-500 border-#{@hue}-600") ||
+             "bg-zinc-800 hover:bg-zinc-700")
       ]}
       {@rest}
     >

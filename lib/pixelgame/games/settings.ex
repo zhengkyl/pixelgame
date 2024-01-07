@@ -6,9 +6,18 @@ defmodule Pixelgame.Games.Settings do
 
   @primary_key false
   embedded_schema do
-    field :board_size, :integer, default: 3
-    field :win_length, :integer, default: 3
-    field :preset, Ecto.Enum, values: @presets, default: :tictactoe
+    field :board_size, :integer
+    field :win_length, :integer
+    field :preset, Ecto.Enum, values: @presets
+  end
+
+  def preset(attr) do
+    case attr.win_length do
+      3 when attr.board_size == 3 -> :tictactoe
+      4 when attr.board_size == 7 -> :connect4
+      5 when attr.board_size == 15 -> :gomoku
+      _ -> :custom
+    end
   end
 
   def changeset(settings, attrs) do
@@ -17,30 +26,20 @@ defmodule Pixelgame.Games.Settings do
       |> cast(attrs, [:board_size, :win_length])
 
     board_size = get_field(changeset, :board_size)
-    win_length = get_field(changeset, :board_size)
+    win_length = get_field(changeset, :win_length)
 
     preset =
-      case win_length do
-        3 when board_size == 3 -> :tictactoe
-        4 when win_length == 7 -> :connect4
-        5 when win_length == 15 -> :gomoku
-        _ -> :custom
-      end
+      preset(%{
+        board_size: board_size,
+        win_length: win_length
+      })
 
     changeset
-    |> validate_number(:board_size, greater_than_or_equal_to: 3, less_than_or_equal_to: 20)
+    |> validate_number(:board_size,
+      greater_than_or_equal_to: win_length,
+      less_than_or_equal_to: 20
+    )
     |> validate_number(:win_length, greater_than_or_equal_to: 3, less_than_or_equal_to: board_size)
     |> put_change(:preset, preset)
   end
-
-  # def create(attrs) do
-  #   # apply_action checks validity via pretend insert
-  #   case %Settings{} |> changeset(attrs) |> apply_action(:insert) do
-  #     {:error, _} ->
-  #       {:error, "Invalid settings"}
-
-  #     {:ok, settings} ->
-  #       settings
-  #   end
-  # end
 end

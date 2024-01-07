@@ -65,6 +65,10 @@ defmodule Pixelgame.Games.Server do
     GenServer.call(via_tuple(code), {:make_move, player_id, move})
   end
 
+  def update_settings(code, settings) do
+    GenServer.call(via_tuple(code), {:update_settings, settings})
+  end
+
   ###
   ### Server (callbacks)
   ###
@@ -134,6 +138,12 @@ defmodule Pixelgame.Games.Server do
         Logger.error("Failed to move in game_#{state.code}: #{inspect(reason)}")
         {:reply, error, state}
     end
+  end
+
+  def handle_call({:update_settings, settings}, _from, %TicTacToe{} = state) do
+    state = TicTacToe.update(state, settings)
+    broadcast_game_state(state)
+    {:reply, :ok, state}
   end
 
   def handle_info(:start_game, %TicTacToe{} = state) do

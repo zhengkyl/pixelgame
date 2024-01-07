@@ -24,7 +24,6 @@ defmodule Pixelgame.Games.Player do
     |> validate_format(:color, ~r/#[A-F\d]{6}/)
   end
 
-  # @spec create(attrs :: map()) :: {:error, Ecto.Changeset.t()} | {:ok, t()}
   def create(attrs) do
     # apply_action checks validity via pretend insert
     case %Player{} |> changeset(attrs) |> apply_action(:insert) do

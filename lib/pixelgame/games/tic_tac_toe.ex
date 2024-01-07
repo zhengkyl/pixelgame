@@ -1,5 +1,6 @@
 defmodule Pixelgame.Games.TicTacToe do
   alias Pixelgame.Games.Player
+  alias Pixelgame.Games.Settings
   alias __MODULE__
 
   defstruct code: nil,
@@ -140,6 +141,14 @@ defmodule Pixelgame.Games.TicTacToe do
     else
       {:error, reason} -> {:error, reason}
     end
+  end
+
+  def update(%TicTacToe{} = state, %Settings{} = settings) do
+    %TicTacToe{
+      state
+      | board_size: settings.board_size,
+        win_length: settings.win_length
+    }
   end
 
   def verify_status(%TicTacToe{status: status}, allowed) do

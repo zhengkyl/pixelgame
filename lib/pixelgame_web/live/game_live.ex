@@ -7,12 +7,8 @@ defmodule PixelgameWeb.GameLive do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(
-       client_info: %{code: "****", id: nil},
-       settings: to_form(Games.Settings.changeset(%Games.Settings{}, %{}))
-     )
-     |> setup_game_assigns(%TicTacToe{})
-     |> setup_settings(%TicTacToe{})}
+     |> assign(client_info: %{code: "****", id: nil})
+     |> setup_game_assigns(%TicTacToe{})}
   end
 
   @salt Application.compile_env(:pixelgame, PixelgameWeb.Endpoint)[:live_view][:signing_salt]
@@ -25,8 +21,6 @@ defmodule PixelgameWeb.GameLive do
           socket
 
         true ->
-          # IO.inspect(socket.assigns)
-
           player_info =
             case socket.assigns do
               %{current_user: nil} ->
@@ -84,7 +78,6 @@ defmodule PixelgameWeb.GameLive do
     socket
     |> assign(client_info: client_info)
     |> setup_game_assigns(game)
-    |> setup_settings(game)
     |> push_event("set", %{
       key: @store_key,
       data: Phoenix.Token.encrypt(PixelgameWeb.Endpoint, @salt, client_info)
@@ -112,17 +105,28 @@ defmodule PixelgameWeb.GameLive do
 
   def handle_event("change_settings", %{"settings" => params}, socket) do
     form =
-      %Games.Settings{}
+      socket.assigns.settings.data
       |> Games.Settings.changeset(params)
       |> Map.put(:action, :insert)
       |> to_form()
 
+    IO.inspect(form)
     {:noreply, assign(socket, settings: form)}
   end
 
-  def handle_event("save_settings", params, socket) do
-    IO.inspect(socket.assigns.settings, label: "old")
-    IO.inspect(params, label: "new")
+  def handle_event("save_settings", %{"settings" => params}, socket) do
+    %{client_info: %{code: code}, settings: settings} = socket.assigns
+
+    case settings.data
+         |> Games.Settings.changeset(params)
+         |> Ecto.Changeset.apply_action(:insert) do
+      {:ok, settings} ->
+        Games.Server.update_settings(code, settings)
+
+      _ ->
+        nil
+    end
+
     {:noreply, socket}
   end
 
@@ -176,7 +180,6 @@ defmodule PixelgameWeb.GameLive do
     {:noreply,
      socket
      |> setup_timer(state)
-     |> setup_settings(state)
      |> setup_game_assigns(state)
      |> endgame_fix(state)}
   end
@@ -221,13 +224,28 @@ defmodule PixelgameWeb.GameLive do
           nil
       end
 
+    form =
+      to_form(
+        %Games.Settings{
+          board_size: state.board_size,
+          win_length: state.win_length,
+          preset:
+            Games.Settings.preset(%{
+              board_size: state.board_size,
+              win_length: state.win_length
+            })
+        }
+        |> Games.Settings.changeset(%{})
+      )
+
     socket
     |> assign(
       game: state,
       ready_count: Map.values(state.players) |> Enum.count(fn player -> player.ready end),
       sorted_players: sorted_players,
       current_player: current_player,
-      game_result: game_result
+      game_result: game_result,
+      settings: form
     )
   end
 
@@ -261,18 +279,6 @@ defmodule PixelgameWeb.GameLive do
       _ ->
         socket
     end
-  end
-
-  def setup_settings(socket, %TicTacToe{} = state) do
-    preset =
-      case state.win_length do
-        3 when state.board_size == 3 -> :tictactoe
-        4 when state.board_size == 7 -> :connect4
-        5 when state.board_size == 15 -> :gomoku
-        _ -> :custom
-      end
-
-    socket |> assign(:preset, preset)
   end
 
   def render(assigns) do
@@ -342,10 +348,10 @@ defmodule PixelgameWeb.GameLive do
               <div class="text-center">Win length</div>
               <div class="text-center">Min players</div>
               <div class="text-center">Max players</div>
-              <div class="font-black text-xl">3</div>
-              <div class="font-black text-xl">3</div>
-              <div class="font-black text-xl">2</div>
-              <div class="font-black text-xl">8</div>
+              <div class="font-black text-xl"><%= @game.board_size %></div>
+              <div class="font-black text-xl"><%= @game.win_length %></div>
+              <div class="font-black text-xl"><%= @game.min_players %></div>
+              <div class="font-black text-xl"><%= @game.max_players %></div>
             </div>
             <.enum_button phx-click={show_modal("settings_modal")}>
               <div>Edit</div>
@@ -363,19 +369,42 @@ defmodule PixelgameWeb.GameLive do
               <div>
                 <div class="font-black text-xl mb-1">Presets</div>
                 <div class="flex flex-wrap gap-2">
-                  <.enum_button hue={if @preset == :custom, do: "amber"}>
-                    <.icon name="hero-cog-6-tooth" class="m-auto" />
-                    <div>Custom</div>
-                  </.enum_button>
-                  <.enum_button hue={if @preset == :tictactoe, do: "amber"}>
+                  <.enum_button
+                    hue={
+                      if Map.get(@settings.source.changes, :preset, @settings.data.preset) ==
+                           :tictactoe,
+                         do: "amber"
+                    }
+                    phx-click={
+                      JS.push("change_settings", value: %{settings: %{board_size: 3, win_length: 3}})
+                    }
+                  >
                     <.icon name="hero-hashtag" class="m-auto" />
                     <div>Tic-tac-toe</div>
                   </.enum_button>
-                  <.enum_button hue={if @preset == :connect4, do: "amber"}>
+                  <.enum_button
+                    hue={
+                      if Map.get(@settings.source.changes, :preset, @settings.data.preset) ==
+                           :connect4,
+                         do: "amber"
+                    }
+                    phx-click={
+                      JS.push("change_settings", value: %{settings: %{board_size: 7, win_length: 4}})
+                    }
+                  >
                     <.icon name="hero-table-cells" class="m-auto" />
                     <div>Connect 4</div>
                   </.enum_button>
-                  <.enum_button hue={if @preset == :gomoku, do: "amber"}>
+                  <.enum_button
+                    hue={
+                      if Map.get(@settings.source.changes, :preset, @settings.data.preset) ==
+                           :gomoku,
+                         do: "amber"
+                    }
+                    phx-click={
+                      JS.push("change_settings", value: %{settings: %{board_size: 15, win_length: 5}})
+                    }
+                  >
                     <.icon name="hero-currency-yen" class="m-auto" />
                     <div>Gomoku</div>
                   </.enum_button>
@@ -393,7 +422,11 @@ defmodule PixelgameWeb.GameLive do
                 </div>
                 <.input field={@settings[:win_length]} type="number" min="3" max="20" step="1" />
               </div>
-              <.button type="submit">
+              <.button
+                type="submit"
+                hue="green"
+                disabled={@settings.source.changes == %{} || !@settings.source.valid?}
+              >
                 Apply
               </.button>
             </.form>
@@ -418,7 +451,7 @@ defmodule PixelgameWeb.GameLive do
       <div :if={@game.status !== :waiting} class="flex flex-col gap-4">
         <div
           id="announcement"
-          class="hidden bg-black/80 fixed left-0 right-0 top-1/3 p-16 transition-opacity ease-in z-10 text-5xl font-black text-center duration-[3s]"
+          class="hidden bg-black/80 fixed left-0 right-0 top-1/3 p-16 transition-opacity ease-in z-10 text-5xl font-black text-center duration-[3s] animate-pop"
           phx-hook="Announcement"
         >
         </div>
@@ -455,14 +488,14 @@ defmodule PixelgameWeb.GameLive do
         </ul>
         <div
           id="game_grid"
-          class={"grid grid-cols-#{@game.board_size} gap-2"}
+          class={"grid grid-cols-#{@game.board_size} gap-1"}
           phx-update={(@game.status == :done && "ignore") || "replace"}
         >
           <%= for x <- 1..@game.board_size do %>
             <%= for y <- 1..@game.board_size do %>
               <div
                 class={[
-                  "border rounded-lg aspect-square",
+                  "border rounded aspect-square",
                   "cursor-pointer",
                   (Map.has_key?(@game.pieces, :win) && MapSet.member?(@game.pieces[:win], {x, y}) &&
                      "bg-amber-600 hover:bg-amber-500") || "hover:bg-white/10"
