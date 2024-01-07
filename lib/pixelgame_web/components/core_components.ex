@@ -17,6 +17,7 @@ defmodule PixelgameWeb.CoreComponents do
   use Phoenix.Component
 
   alias Phoenix.LiveView.JS
+  alias Pixelgame.Games.Player
   import PixelgameWeb.Gettext
 
   @doc """
@@ -683,12 +684,29 @@ defmodule PixelgameWeb.CoreComponents do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
   end
 
-  attr :stroke, :string, default: nil
+  attr :player, Player, default: %Player{}
   attr :rest, :global
+
+  def player_tile(assigns) do
+    ~H"""
+    <%= case @player.shape do %>
+      <% :cross -> %>
+        <.cross stroke={@player.color} {@rest} />
+      <% :circle -> %>
+        <.circle stroke={@player.color} {@rest} />
+      <% :square -> %>
+        <.square stroke={@player.color} {@rest} />
+      <% :triangle -> %>
+        <.triangle stroke={@player.color} {@rest} />
+    <% end %>
+    """
+  end
+
+  attr :rest, :global, include: ~w(stroke)
 
   def cross(assigns) do
     ~H"""
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" stroke={@stroke} {@rest}>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" {@rest}>
       <path
         d="M2.4 2.3c1 1 2.3 1.9 3.2 3.1.8 1 2.6 3.4 3.7 4.1 1.7 1.3 2.6 2.3 4.2 3.6 1.1.9 1.9 1.5 2.7 2.7l1.7 2"
         style="fill:none;stroke-width:3;stroke-linecap:round"
@@ -701,12 +719,11 @@ defmodule PixelgameWeb.CoreComponents do
     """
   end
 
-  attr :stroke, :string, default: nil
-  attr :rest, :global
+  attr :rest, :global, include: ~w(stroke)
 
   def circle(assigns) do
     ~H"""
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" stroke={@stroke} {@rest}>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" {@rest}>
       <path
         d="M9.5 2.7C8 2.7 7 3 5.6 4a5.8 5.8 0 0 0-2.5 3c-.6 1.3-1 2.6-.9 4a5 5 0 0 0 1 3.6c.9 1 2.1 1.8 3.4 2.2 2.2.8 4.6 1.1 7 .9 1.5-.4 2.5-2 3.2-3.3a6.7 6.7 0 0 0 1.1-4 7 7 0 0 0-2.5-5.7 9 9 0 0 0-4.8-2h-1Z"
         style="fill:none;stroke-width:3;stroke-linecap:round"
@@ -715,12 +732,11 @@ defmodule PixelgameWeb.CoreComponents do
     """
   end
 
-  attr :stroke, :string, default: nil
-  attr :rest, :global
+  attr :rest, :global, include: ~w(stroke)
 
   def triangle(assigns) do
     ~H"""
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" stroke={@stroke} {@rest}>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" {@rest}>
       <path
         d="M10.3 2.8c-.7.8-1.2 2-2 2.8-1.4 2-2.3 4.2-3.7 6.1l-1 1.8c-.3 1-1 1.8-1.2 2.9-.2.9 1.2.3 1.7.5h6.2l6.7.1c.8.4 1-.5.8-1.1a7 7 0 0 0-1.1-2.9C16 12 15.3 11 14.9 9.7L14 7.3A4 4 0 0 0 12.8 5c-.8-.8-2-2.9-2.5-2.3z"
         style="fill:none;stroke-width:3;stroke-linecap:round"
@@ -729,12 +745,11 @@ defmodule PixelgameWeb.CoreComponents do
     """
   end
 
-  attr :stroke, :string, default: nil
-  attr :rest, :global
+  attr :rest, :global, include: ~w(stroke)
 
   def square(assigns) do
     ~H"""
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" stroke={@stroke} {@rest}>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" {@rest}>
       <path
         d="M2.6 2.5c-.5.3.1 5.3.2 8 .3 2 .5 4 .3 6.2.2 1 1.6 1 2.4 1l7.6.3c1.1 0 2.2.2 3.3 0 1.2-.6 1.2-2 1.2-3.1.1-2.9-.2-5.8.3-8.6 0-1 .3-2.2 0-3.2-.9-.8-2.1-.5-3.1-.7l-7.7.1s-4-.4-4.5 0z"
         style="fill:none;stroke-width:3;stroke-linecap:round"

@@ -497,46 +497,26 @@ defmodule PixelgameWeb.GameLive do
                 class={[
                   "border rounded aspect-square",
                   "cursor-pointer",
-                  (Map.has_key?(@game.pieces, :win) && MapSet.member?(@game.pieces[:win], {x, y}) &&
-                     "bg-amber-600 hover:bg-amber-500") || "hover:bg-white/10"
+                  Map.has_key?(@game.pieces, :win) && MapSet.member?(@game.pieces[:win], {x, y}) &&
+                    "bg-amber-600"
                 ]}
                 phx-click="move"
                 phx-value-row={x}
                 phx-value-col={y}
               >
-                <%= for id <- Map.keys(@game.players) do %>
-                  <%= if MapSet.member?(@game.pieces[id], {x, y}) do %>
-                    <%= case @game.players[id].shape do %>
-                      <% :cross -> %>
-                        <.cross
-                          stroke={@game.players[id].color}
-                          id={"game_tile_#{x}_#{y}"}
-                          phx-hook="GameTile"
-                          class="animate-pop"
-                        />
-                      <% :circle -> %>
-                        <.circle
-                          stroke={@game.players[id].color}
-                          id={"game_tile_#{x}_#{y}"}
-                          phx-hook="GameTile"
-                          class="animate-pop"
-                        />
-                      <% :square -> %>
-                        <.square
-                          stroke={@game.players[id].color}
-                          id={"game_tile_#{x}_#{y}"}
-                          phx-hook="GameTile"
-                          class="animate-pop"
-                        />
-                      <% :triangle -> %>
-                        <.triangle
-                          stroke={@game.players[id].color}
-                          id={"game_tile_#{x}_#{y}"}
-                          phx-hook="GameTile"
-                          class="animate-pop"
-                        />
-                    <% end %>
-                  <% end %>
+                <%= case Enum.find(@game.players, fn {id, _} -> MapSet.member?(@game.pieces[id], {x, y}) end) do %>
+                  <% {_, player} -> %>
+                    <.player_tile
+                      player={player}
+                      id={"game_tile_#{x}_#{y}"}
+                      phx-hook="GameTile"
+                      class="animate-pop"
+                    />
+                  <% nil -> %>
+                    <.player_tile
+                      player={@game.players[@client_info.id]}
+                      class="opacity-0 hover:opacity-10 transition-opacity"
+                    />
                 <% end %>
               </div>
             <% end %>
