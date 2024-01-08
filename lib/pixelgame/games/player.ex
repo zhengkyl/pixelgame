@@ -13,15 +13,15 @@ defmodule Pixelgame.Games.Player do
     field :name, :string
     field :order, :integer, default: 0
     field :shape, Ecto.Enum, values: @shapes, default: :cross
-    field :color, :string, default: "#FFFFFF"
+    field :color, :string, default: "#ffffff"
     field :ready, :boolean, default: false
   end
 
   def changeset(player, attrs) do
     player
-    |> cast(attrs, [:name, :id, :color])
+    |> cast(attrs, [:name, :id, :shape, :color])
     |> validate_required([:name, :id])
-    |> validate_format(:color, ~r/#[A-F\d]{6}/)
+    |> validate_format(:color, ~r/(#[a-f\d]{6})|(none)/)
   end
 
   def create(attrs) do

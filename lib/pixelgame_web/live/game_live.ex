@@ -1,6 +1,7 @@
 defmodule PixelgameWeb.GameLive do
   alias Phoenix.PubSub
   alias Pixelgame.Games.TicTacToe
+  alias Pixelgame.Games.Player
   alias Pixelgame.Games
   use PixelgameWeb, :live_view
 
@@ -110,7 +111,6 @@ defmodule PixelgameWeb.GameLive do
       |> Map.put(:action, :insert)
       |> to_form()
 
-    IO.inspect(form)
     {:noreply, assign(socket, settings: form)}
   end
 
@@ -127,6 +127,18 @@ defmodule PixelgameWeb.GameLive do
         nil
     end
 
+    {:noreply, socket}
+  end
+
+  def handle_event("customize_player", %{"shape" => shape}, socket) do
+    %{client_info: %{code: code, id: id}} = socket.assigns
+    Games.Server.customize_player(code, id, %{shape: String.to_existing_atom(shape)})
+    {:noreply, socket}
+  end
+
+  def handle_event("customize_player", %{"color" => color}, socket) do
+    %{client_info: %{code: code, id: id}} = socket.assigns
+    Games.Server.customize_player(code, id, %{color: color})
     {:noreply, socket}
   end
 
@@ -321,44 +333,7 @@ defmodule PixelgameWeb.GameLive do
             <%= @client_info.code %>
           </div>
         </div>
-        <ul class="flex flex-wrap gap-4">
-          <li
-            :for={player <- @sorted_players}
-            class={[
-              "rounded p-4 flex-1 flex flex-col justify-between bg-fuchsia-900",
-              player.id == @client_info.id && "outline"
-            ]}
-          >
-            <span class="font-bold">
-              <%= player.name %>
-            </span>
-            <div class={[
-              "text-sm font-black",
-              if(player.ready, do: "text-green-400", else: "text-yellow-400")
-            ]}>
-              <%= if player.ready, do: "READY", else: "NOT READY" %>
-            </div>
-          </li>
-        </ul>
         <div>
-          <div class="text-3xl font-black text-center">Settings</div>
-          <div class="flex justify-between">
-            <div class="font-semibold px-4 py-2 gap-x-4 grid grid-cols-4 justify-items-center items-center border rounded-lg bg-zinc-800">
-              <div class="text-center">Board size</div>
-              <div class="text-center">Win length</div>
-              <div class="text-center">Min players</div>
-              <div class="text-center">Max players</div>
-              <div class="font-black text-xl"><%= @game.board_size %></div>
-              <div class="font-black text-xl"><%= @game.win_length %></div>
-              <div class="font-black text-xl"><%= @game.min_players %></div>
-              <div class="font-black text-xl"><%= @game.max_players %></div>
-            </div>
-            <.enum_button phx-click={show_modal("settings_modal")}>
-              <div>Edit</div>
-              <.icon name="hero-cog-6-tooth" class="m-auto" />
-            </.enum_button>
-          </div>
-
           <.modal id="settings_modal">
             <.form
               for={@settings}
@@ -431,6 +406,94 @@ defmodule PixelgameWeb.GameLive do
               </.button>
             </.form>
           </.modal>
+        </div>
+        <div class="flex justify-between">
+          <div class="font-semibold px-4 py-2 gap-x-4 grid grid-cols-4 justify-items-center items-center border rounded-lg bg-zinc-800">
+            <div class="text-center">Board size</div>
+            <div class="text-center">Win length</div>
+            <div class="text-center">Min players</div>
+            <div class="text-center">Max players</div>
+            <div class="font-black text-xl"><%= @game.board_size %></div>
+            <div class="font-black text-xl"><%= @game.win_length %></div>
+            <div class="font-black text-xl"><%= @game.min_players %></div>
+            <div class="font-black text-xl"><%= @game.max_players %></div>
+          </div>
+          <.enum_button phx-click={show_modal("settings_modal")}>
+            <div>Edit</div>
+            <.icon name="hero-cog-6-tooth" class="m-auto" />
+          </.enum_button>
+        </div>
+
+        <div class="grid min-[400px]:grid-cols-4 gap-2">
+          <div class="border rounded-lg flex flex-col justify-between gap-2 p-4 col-span-2 row-span-5">
+            <div>
+              <div class="font-bold">
+                <%= @game.players[@client_info.id].name %>
+              </div>
+              <div class={[
+                "text-sm font-black",
+                if(@game.players[@client_info.id].ready, do: "text-green-400", else: "text-yellow-400")
+              ]}>
+                <%= if @game.players[@client_info.id].ready, do: "READY", else: "NOT READY" %>
+              </div>
+            </div>
+            <.player_tile player={@game.players[@client_info.id]} />
+            <div class="grid grid-cols-4 gap-2">
+              <%= for shapeP <- [%Player{shape: :cross}, %Player{shape: :circle}, %Player{shape: :square}, %Player{shape: :triangle}] do %>
+                <.button
+                  bare
+                  class={
+                    (@game.players[@client_info.id].shape == shapeP.shape &&
+                       "outline-amber-400 outline p-2 mb-2") ||
+                      "p-2 mb-2"
+                  }
+                  phx-click="customize_player"
+                  phx-value-shape={shapeP.shape}
+                >
+                  <.player_tile player={shapeP} class="w-full" />
+                </.button>
+              <% end %>
+              <%= for color <- ["#ff595e", "#ffca3a","#8ac926", "#1982c4","#6a4c93"  ,"#ff70a6" ,"#ffffff", "none" ] do %>
+                <.button
+                  bare
+                  class={
+                    (@game.players[@client_info.id].color == color && "outline-amber-400 outline p-2") ||
+                      "p-2"
+                  }
+                  phx-click="customize_player"
+                  phx-value-color={color}
+                >
+                  <.box
+                    class="w-full"
+                    fill={color}
+                    stroke={if color == "none", do: "#fff", else: color}
+                  />
+                </.button>
+              <% end %>
+            </div>
+          </div>
+
+          <div
+            :for={player <- @sorted_players}
+            :if={player.id != @client_info.id}
+            class={[
+              "rounded-lg p-4 flex justify-between border col-span-2",
+              player.id == @client_info.id && "outline"
+            ]}
+          >
+            <div>
+              <div class="font-bold">
+                <%= player.name %>
+              </div>
+              <div class={[
+                "text-sm font-black",
+                if(player.ready, do: "text-green-400", else: "text-yellow-400")
+              ]}>
+                <%= if player.ready, do: "READY", else: "NOT READY" %>
+              </div>
+            </div>
+            <.player_tile player={player} class="w-11" />
+          </div>
         </div>
 
         <div class="flex gap-4">

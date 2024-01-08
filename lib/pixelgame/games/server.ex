@@ -53,6 +53,10 @@ defmodule Pixelgame.Games.Server do
     GenServer.call(via_tuple(code), {:join_game, player})
   end
 
+  def customize_player(code, player_id, updates) do
+    GenServer.call(via_tuple(code), {:customize_player, player_id, updates})
+  end
+
   def leave_game(code, player_id) do
     GenServer.call(via_tuple(code), {:leave_game, player_id})
   end
@@ -93,6 +97,20 @@ defmodule Pixelgame.Games.Server do
 
       {:error, reason} = error ->
         Logger.error("Failed to join game_#{state.code}: #{inspect(reason)}")
+        {:reply, error, state}
+    end
+  end
+
+  def handle_call({:customize_player, player_id, updates}, _from, state) do
+    with {:ok, player} <- TicTacToe.find_player(state, player_id),
+         {:ok, player} <-
+           Player.changeset(player, updates) |> Ecto.Changeset.apply_action(:insert) do
+      state = TicTacToe.customize(state, player)
+      broadcast_game_state(state)
+      {:reply, :ok, state}
+    else
+      {:error, reason} = error ->
+        Logger.error("Failed to customize game_#{state.code}: #{inspect(reason)}")
         {:reply, error, state}
     end
   end

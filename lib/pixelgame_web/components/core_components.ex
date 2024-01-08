@@ -206,6 +206,7 @@ defmodule PixelgameWeb.CoreComponents do
   attr :class, :string, default: nil
   attr :hue, :string, default: nil
   attr :disabled, :boolean, default: false
+  attr :bare, :boolean, default: false
   attr :rest, :global, include: ~w(form name value)
 
   slot :inner_block, required: true
@@ -216,9 +217,10 @@ defmodule PixelgameWeb.CoreComponents do
       type={@type}
       disabled={@disabled || nil}
       class={[
-        "phx-submit-loading:opacity-75 rounded-lg px-6 py-4",
+        "phx-submit-loading:opacity-75 rounded-lg",
         "text-xl font-black border",
         (@disabled && "bg-zinc-800 text-zinc-600") || "text-white active:text-white/80",
+        !@bare && "px-6 py-4",
         @class,
         !@disabled &&
           ((@hue != nil && "bg-#{@hue}-600 hover:bg-#{@hue}-500 border-#{@hue}-600") ||
@@ -754,6 +756,16 @@ defmodule PixelgameWeb.CoreComponents do
         d="M2.6 2.5c-.5.3.1 5.3.2 8 .3 2 .5 4 .3 6.2.2 1 1.6 1 2.4 1l7.6.3c1.1 0 2.2.2 3.3 0 1.2-.6 1.2-2 1.2-3.1.1-2.9-.2-5.8.3-8.6 0-1 .3-2.2 0-3.2-.9-.8-2.1-.5-3.1-.7l-7.7.1s-4-.4-4.5 0z"
         style="fill:none;stroke-width:3;stroke-linecap:round"
       />
+    </svg>
+    """
+  end
+
+  attr :rest, :global, include: ~w(stroke fill)
+
+  def box(assigns) do
+    ~H"""
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" {@rest}>
+      <rect x={0} y={0} height={20} width={20} />
     </svg>
     """
   end

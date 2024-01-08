@@ -92,6 +92,13 @@ defmodule Pixelgame.Games.TicTacToe do
     end
   end
 
+  def customize(%TicTacToe{players: players} = state, %Player{} = updated_player) do
+    %TicTacToe{
+      state
+      | players: %{players | updated_player.id => updated_player}
+    }
+  end
+
   def leave(%TicTacToe{players: players} = state, %Player{id: id}) do
     {:ok, %TicTacToe{state | players: Map.delete(players, id)}}
   end
