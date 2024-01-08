@@ -106,3 +106,44 @@ export const GameTile = {
     audio.play();
   },
 };
+
+export const Hero = {
+  mounted() {
+    const tiles = [];
+    for (let i = 0; i < 3; i++) {
+      tiles.push([]);
+      for (let j = 0; j < 3; j++) {
+        tiles[i].push(document.getElementById(`hero_${i + 1}_${j + 1}`));
+      }
+    }
+    const cross = document.getElementById("hero_cross").content;
+    const circle = document.getElementById("hero_circle").content;
+
+    let odd = false;
+
+    const run = () => {
+      const x = Math.floor(Math.random() * 3);
+      const y = Math.floor(Math.random() * 3);
+
+      if (
+        tiles[x][y].hasChildNodes() &&
+        tiles[x][y].children[0].style.opacity == 1
+      ) {
+        tiles[x][y].children[0].style.opacity = 0;
+      } else {
+        const node = odd ? cross.cloneNode(true) : circle.cloneNode(true);
+
+        // children[0] is needed b/c childNodes includes text nodes
+        node.children[0].style.opacity = 0;
+        tiles[x][y].replaceChildren(node);
+
+        this.el.offsetHeight; // trigger reflow -> transition runs
+        // node is an empty fragment after append
+        tiles[x][y].children[0].style.opacity = 1;
+        odd = !odd;
+      }
+    };
+    // setTimeout();
+    setInterval(run, 2000);
+  },
+};

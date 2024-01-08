@@ -273,10 +273,10 @@ defmodule PixelgameWeb.GameLive do
 
     case state.status do
       :playing when game.status == :playing and state.turn != game.turn ->
-        socket |> push_event("startTimer", %{s: 60})
+        socket |> push_event("startTimer", %{s: 30})
 
       :playing when game.status == :waiting ->
-        socket |> push_event("startTimer", %{s: 60})
+        socket |> push_event("startTimer", %{s: 30})
 
       :done when game.status == :playing ->
         info =
@@ -599,7 +599,7 @@ defmodule PixelgameWeb.GameLive do
                 "border rounded p-2 flex items-center justify-between gap-2 [text-wrap:nowrap]",
                 player.id == @client_info.id &&
                   "bg-amber-600 border-amber-600 mb-4",
-                (TicTacToe.is_player_turn?(@game, player) && "outline")
+                TicTacToe.is_player_turn?(@game, player) && "outline"
               ]}
             >
               <div class="font-bold flex-1">

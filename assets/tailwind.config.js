@@ -37,9 +37,17 @@ module.exports = {
           "60%": { transform: "scale(1.2)" },
           "100%": { transform: "scale(1)" },
         },
+        dance: {
+          "0%": { transform: "rotate3d(0, 0, 1, 0deg)" },
+          "20%": { transform: "rotate3d(0, 0, 1, 0deg)" },
+          "40%": { transform: "rotate3d(0, 0, 1, 180deg)" },
+          "60%": { transform: "rotate3d(1, 0, 0, 180deg)" },
+          "80%": { transform: "rotate3d(1, 2, 0, 180deg)" },
+        },
       },
       animation: {
         pop: "pop 300ms ease-in-out",
+        dance: "dance 30s infinite",
       },
       gridTemplateColumns: {
         13: "repeat(13, minmax(0, 1fr))",

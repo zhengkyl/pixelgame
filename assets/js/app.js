@@ -27,6 +27,7 @@ import {
   Timer,
   Announcement,
   GameTile,
+  Hero,
 } from "./hooks";
 import topbar from "../vendor/topbar";
 
@@ -42,6 +43,7 @@ let liveSocket = new LiveSocket("/live", Socket, {
     Timer,
     Announcement,
     GameTile,
+    Hero,
   },
 });
 

@@ -27,10 +27,10 @@ defmodule Pixelgame.Games.TicTacToe do
           timer_ref: nil
         }
 
-  # 5 minute timeout while not :playing
-  @timeout_time 1000 * 60 * 50
-  # 1 minute turn time while :playing
-  @turn_time 1000 * 60
+  # 15 minute timeout while not :playing
+  @timeout_time 1000 * 60 * 15
+  # 30 sec turn time while :playing
+  @turn_time 1000 * 30
 
   def new(code, player, board_size \\ 3, win_length \\ 3) do
     %TicTacToe{
