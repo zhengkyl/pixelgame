@@ -92,7 +92,7 @@ defmodule Pixelgame.NameGenerator do
     "seaman",
     "sinner",
     "snack",
-    "villian",
+    "villain",
     "youngin",
     "youngster"
   }

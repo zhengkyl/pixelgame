@@ -56,8 +56,8 @@ export const Timer = {
       const run = () => {
         this.el.textContent =
           `${Math.floor(seconds / 60)}:` + `${seconds % 60}`.padStart(2, "0");
-        seconds--;
         if (seconds) timeout = setTimeout(run, 1000);
+        seconds--;
       };
       run();
     });

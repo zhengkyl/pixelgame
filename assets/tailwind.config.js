@@ -51,6 +51,9 @@ module.exports = {
         19: "repeat(19, minmax(0, 1fr))",
         20: "repeat(20, minmax(0, 1fr))",
       },
+      screens: {
+        xs: "360px",
+      },
     },
   },
   plugins: [

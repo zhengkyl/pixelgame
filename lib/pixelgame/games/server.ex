@@ -176,7 +176,7 @@ defmodule Pixelgame.Games.Server do
   end
 
   def handle_info(:end_turn, %TicTacToe{} = state) do
-    state = TicTacToe.next_turn(state)
+    state = TicTacToe.next_turn(state) |> TicTacToe.reset_timer()
     broadcast_game_state(state)
     {:noreply, state}
   end

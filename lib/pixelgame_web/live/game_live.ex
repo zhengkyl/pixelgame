@@ -73,18 +73,25 @@ defmodule PixelgameWeb.GameLive do
   end
 
   defp setup_socket(socket, %{} = client_info) do
-    PubSub.subscribe(Pixelgame.PubSub, "game:#{client_info.code}")
     game = Pixelgame.Games.Server.get_state(client_info.code)
 
-    socket
-    |> assign(client_info: client_info)
-    |> setup_game_assigns(game)
-    |> push_event("set", %{
-      key: @store_key,
-      data: Phoenix.Token.encrypt(PixelgameWeb.Endpoint, @salt, client_info)
-    })
-    # remove query params w/o redirect
-    |> push_event("replaceHistory", %{url: "game"})
+    case Map.has_key?(game.players, client_info.id) do
+      false ->
+        socket |> redirect(to: ~p"/")
+
+      true ->
+        PubSub.subscribe(Pixelgame.PubSub, "game:#{client_info.code}")
+
+        socket
+        |> assign(client_info: client_info)
+        |> setup_game_assigns(game)
+        |> push_event("set", %{
+          key: @store_key,
+          data: Phoenix.Token.encrypt(PixelgameWeb.Endpoint, @salt, client_info)
+        })
+        # remove query params w/o redirect
+        |> push_event("replaceHistory", %{url: "game"})
+    end
   end
 
   def handle_event("restoreClientInfo", token_data, socket) when is_binary(token_data) do
@@ -424,8 +431,8 @@ defmodule PixelgameWeb.GameLive do
           </.enum_button>
         </div>
 
-        <div class="grid min-[400px]:grid-cols-4 gap-2">
-          <div class="border rounded-lg flex flex-col justify-between gap-2 p-4 col-span-2 row-span-5">
+        <div class="flex flex-wrap justify-center items-start gap-4">
+          <div class="border rounded-lg flex flex-col justify-between gap-2 p-4 min-w-[240px] max-w-xs [flex:2]">
             <div>
               <div class="font-bold">
                 <%= @game.players[@client_info.id].name %>
@@ -472,27 +479,35 @@ defmodule PixelgameWeb.GameLive do
               <% end %>
             </div>
           </div>
-
-          <div
-            :for={player <- @sorted_players}
-            :if={player.id != @client_info.id}
-            class={[
-              "rounded-lg p-4 flex justify-between border col-span-2",
-              player.id == @client_info.id && "outline"
-            ]}
-          >
-            <div>
-              <div class="font-bold">
-                <%= player.name %>
-              </div>
-              <div class={[
-                "text-sm font-black",
-                if(player.ready, do: "text-green-400", else: "text-yellow-400")
-              ]}>
-                <%= if player.ready, do: "READY", else: "NOT READY" %>
-              </div>
+          <div class="[flex:3] min-w-[200px] flex flex-col gap-4">
+            <div
+              :if={map_size(@game.players) == 1}
+              class="rounded-lg p-4 border text-center text-bold"
+            >
+              <div class="font-black">Not enough players</div>
+              Invite players to start a game
             </div>
-            <.player_tile player={player} class="w-11" />
+            <div
+              :for={player <- @sorted_players}
+              :if={player.id != @client_info.id}
+              class={[
+                "rounded-lg p-4 flex justify-between border",
+                player.id == @client_info.id && "outline"
+              ]}
+            >
+              <div>
+                <div class="font-bold">
+                  <%= player.name %>
+                </div>
+                <div class={[
+                  "text-sm font-black",
+                  if(player.ready, do: "text-green-400", else: "text-yellow-400")
+                ]}>
+                  <%= if player.ready, do: "READY", else: "NOT READY" %>
+                </div>
+              </div>
+              <.player_tile player={player} class="w-11" />
+            </div>
           </div>
         </div>
 
@@ -535,56 +550,66 @@ defmodule PixelgameWeb.GameLive do
 
           <div id="timer" class="text-xl flex-1 text-right" phx-hook="Timer"></div>
         </div>
-        <ul class="flex flex-wrap gap-4">
-          <li
-            :for={player <- @sorted_players}
-            class={[
-              "rounded p-2 flex-1 flex flex-col justify-between",
-              player.id == @client_info.id && "outline",
-              (Games.TicTacToe.is_player_turn?(@game, player) && "bg-fuchsia-900") || "bg-zinc-700"
-            ]}
+        <div class="relative">
+          <div
+            id="game_grid"
+            class={"grid grid-cols-#{@game.board_size} gap-1"}
+            phx-update={(@game.status == :done && "ignore") || "replace"}
           >
-            <span class="font-bold">
-              <%= player.name %>
-            </span>
-          </li>
-        </ul>
-        <div
-          id="game_grid"
-          class={"grid grid-cols-#{@game.board_size} gap-1"}
-          phx-update={(@game.status == :done && "ignore") || "replace"}
-        >
-          <%= for x <- 1..@game.board_size do %>
-            <%= for y <- 1..@game.board_size do %>
-              <div
-                class={[
-                  "border rounded aspect-square",
-                  "cursor-pointer",
-                  Map.has_key?(@game.pieces, :win) && MapSet.member?(@game.pieces[:win], {x, y}) &&
-                    "bg-amber-600"
-                ]}
-                phx-click="move"
-                phx-value-row={x}
-                phx-value-col={y}
-              >
-                <%= case Enum.find(@game.players, fn {id, _} -> MapSet.member?(@game.pieces[id], {x, y}) end) do %>
-                  <% {_, player} -> %>
-                    <.player_tile
-                      player={player}
-                      id={"game_tile_#{x}_#{y}"}
-                      phx-hook="GameTile"
-                      class="animate-pop"
-                    />
-                  <% nil -> %>
-                    <.player_tile
-                      player={@game.players[@client_info.id]}
-                      class="opacity-0 hover:opacity-10 transition-opacity"
-                    />
-                <% end %>
-              </div>
+            <%= for x <- 1..@game.board_size do %>
+              <%= for y <- 1..@game.board_size do %>
+                <div
+                  class={[
+                    "border rounded aspect-square",
+                    "cursor-pointer",
+                    Map.has_key?(@game.pieces, :win) && MapSet.member?(@game.pieces[:win], {x, y}) &&
+                      "bg-amber-600"
+                  ]}
+                  phx-click="move"
+                  phx-value-row={x}
+                  phx-value-col={y}
+                >
+                  <%= case Enum.find(@game.players, fn {id, _} -> MapSet.member?(@game.pieces[id], {x, y}) end) do %>
+                    <% {_, player} -> %>
+                      <.player_tile
+                        player={player}
+                        id={"game_tile_#{x}_#{y}"}
+                        phx-hook="GameTile"
+                        class="animate-pop"
+                      />
+                    <% nil -> %>
+                      <.player_tile
+                        player={@game.players[@client_info.id]}
+                        class="opacity-0 hover:opacity-10 transition-opacity"
+                      />
+                  <% end %>
+                </div>
+              <% end %>
             <% end %>
-          <% end %>
+          </div>
+          <ul class="lg:absolute lg:ml-4 lg:mt-0 mt-4 col-span-3 top-0 left-[100%] flex flex-col gap-2">
+            <li
+              :for={
+                player <-
+                  @sorted_players
+                  |> Enum.split(@game.players[@client_info.id].order)
+                  |> then(fn {head, tail} -> tail ++ head end)
+              }
+              class={[
+                "border rounded p-2 flex items-center justify-between gap-2 [text-wrap:nowrap]",
+                player.id == @client_info.id &&
+                  "bg-amber-600 border-amber-600 mb-4",
+                (TicTacToe.is_player_turn?(@game, player) && "outline")
+              ]}
+            >
+              <div class="font-bold flex-1">
+                <%= player.name %>
+              </div>
+              <.player_tile player={player} class="w-8" />
+            </li>
+          </ul>
         </div>
+
         <div :if={@game.status == :done} class="flex gap-4">
           <.button phx-click="leave">
             Leave

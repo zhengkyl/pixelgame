@@ -123,7 +123,7 @@ defmodule Pixelgame.Games.TicTacToe do
           |> Enum.zip(Enum.shuffle(0..(map_size(players) - 1)))
           |> Map.new(fn {{id, player}, order} -> {id, %Player{player | order: order}} end)
 
-        {:ok, %TicTacToe{state | status: :playing, players: players}}
+        {:ok, %TicTacToe{state | status: :playing, players: players} |> reset_timer()}
 
       false ->
         {:error, "Not all players ready to start game"}
@@ -244,11 +244,11 @@ defmodule Pixelgame.Games.TicTacToe do
     end
   end
 
-  defp reset_timer(%TicTacToe{status: :playing} = state) do
+  def reset_timer(%TicTacToe{status: :playing} = state) do
     state |> cancel_timer() |> set_timer(:end_turn, @turn_time)
   end
 
-  defp reset_timer(%TicTacToe{} = state) do
+  def reset_timer(%TicTacToe{} = state) do
     state |> cancel_timer() |> set_timer(:end_for_timeout, @timeout_time)
   end
 
