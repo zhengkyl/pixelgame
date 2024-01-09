@@ -12,7 +12,10 @@ defmodule PixelgameWeb.GameLive do
      |> setup_game_assigns(%TicTacToe{})}
   end
 
-  @salt Application.compile_env(:pixelgame, PixelgameWeb.Endpoint)[:live_view][:signing_salt]
+  defp salt() do
+    Application.fetch_env!(:pixelgame, PixelgameWeb.Endpoint)[:live_view][:signing_salt]
+  end
+
   @store_key "client_info"
 
   def handle_params(params, _uri, socket) do
@@ -87,7 +90,7 @@ defmodule PixelgameWeb.GameLive do
         |> setup_game_assigns(game)
         |> push_event("set", %{
           key: @store_key,
-          data: Phoenix.Token.encrypt(PixelgameWeb.Endpoint, @salt, client_info)
+          data: Phoenix.Token.encrypt(PixelgameWeb.Endpoint, salt(), client_info)
         })
         # remove query params w/o redirect
         |> push_event("replaceHistory", %{url: "game"})
@@ -97,7 +100,7 @@ defmodule PixelgameWeb.GameLive do
   def handle_event("restoreClientInfo", token_data, socket) when is_binary(token_data) do
     # 3600 = 1 hour, abitrary but should match rejoin time limit
     with {:ok, client_info} <-
-           Phoenix.Token.decrypt(PixelgameWeb.Endpoint, @salt, token_data, max_age: 3600),
+           Phoenix.Token.decrypt(PixelgameWeb.Endpoint, salt(), token_data, max_age: 3600),
          :ok <- Games.Server.ensure_server_exists(Map.get(client_info, :code)) do
       {:noreply, socket |> setup_socket(client_info)}
     else
@@ -327,7 +330,7 @@ defmodule PixelgameWeb.GameLive do
             phx-update="ignore"
             phx-click={
               JS.dispatch("pixelgame:clipcopy",
-                detail: %{text: "localhost:4000/game?code=#{@client_info.code}"}
+                detail: %{text: "#{PixelgameWeb.Endpoint.url()}/game?code=#{@client_info.code}"}
               )
             }
           >

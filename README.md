@@ -1,12 +1,12 @@
 # pixelgame
 
-For now, a blatant copy of the below.
+Online [m,n,k game](https://en.wikipedia.org/wiki/M,n,k-game), but for m == n <= 20
 
-https://github.com/fly-apps/tictac
+Demo at [pixelgame.fly.dev](https://pixelgame.fly.dev)
 
-https://softwaremill.com/phoenix-with-github-oauth-authentication
+Inspired by https://github.com/fly-apps/tictac
 
-## Dev
+## Development
 
 - `source .env.dev`
 - `mix setup`

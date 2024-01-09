@@ -1,5 +1,3 @@
-import JSConfetti from "js-confetti";
-
 export const GameHooks = {
   // https://fly.io/phoenix-files/saving-and-restoring-liveview-state/
   mounted() {
@@ -67,14 +65,8 @@ export const Timer = {
   },
 };
 
-const winEmojis = ["👑", "🥇", "⭐", "🎉", "🥳"];
-
-const loseEmojis = ["💀", "🗿", "🪦", "🥀", "😵"];
-
 export const Announcement = {
   mounted() {
-    const jsConfetti = new JSConfetti();
-
     this.handleEvent("announce", ({ msg, win }) => {
       // gross but delay feels better
       setTimeout(() => {
@@ -82,9 +74,46 @@ export const Announcement = {
           win ? "/sounds/victory.ogg" : "/sounds/defeat.ogg"
         );
         audio.play();
-        jsConfetti.addConfetti({
-          emojis: win ? winEmojis : loseEmojis,
-        });
+
+        if (win) {
+          const end = Date.now() + 3000;
+          const frame = () => {
+            confetti({
+              particleCount: 2,
+              angle: 60,
+              origin: { x: 0, y: 0.7 },
+            });
+            confetti({
+              particleCount: 2,
+              angle: 120,
+              origin: { x: 1, y: 0.7 },
+            });
+            confetti({
+              particleCount: 2,
+              origin: { y: 1, x: 0.75 },
+            });
+            confetti({
+              particleCount: 2,
+              origin: { y: 1, x: 0.25 },
+            });
+            if (Date.now() < end) requestAnimationFrame(frame);
+          };
+          frame();
+        } else {
+          confetti({
+            particleCount: 20,
+            colors: ["#c7c7c7"],
+            angle: 45,
+            origin: { x: 0 },
+          });
+          confetti({
+            particleCount: 20,
+            colors: ["#c7c7c7"],
+            angle: 135,
+            origin: { x: 1 },
+          });
+        }
+
         this.el.textContent = msg;
         this.el.style.display = "block";
         this.el.offsetHeight; // trigger reflow -> transition runs

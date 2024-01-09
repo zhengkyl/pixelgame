@@ -1,5 +1,5 @@
 <.flash_group flash={@flash} />
-<div class="py-8 px-4 sm:px-8 lg:px-16 overflow-y-hidden">
+<div class="py-8 px-4 sm:px-8 lg:px-16 overflow-hidden">
   <div class="mx-auto max-w-xl">
     <div class="mt-10 flex justify-between">
       <h1 class="text-brand text-2xl font-bold">
@@ -22,7 +22,7 @@
     </div>
     <div class="relative my-4" id="hero" phx-hook="Hero">
       <h2 class="w-full absolute top-1/2 -translate-y-1/2 font-black text-5xl text-center drop-shadow-2xl">
-        Your Grandpa's <span class="[text-wrap:nowrap]">Tic-tac-toe</span>
+        Your Grandpa's <span class="whitespace-nowrap">Tic-tac-toe</span>
       </h2>
       <div class="max-w-[50svh] grid grid-cols-3 gap-2 m-auto opacity-10 animate-dance -z-10 relative">
         <%= for x <- 1..3 do %>

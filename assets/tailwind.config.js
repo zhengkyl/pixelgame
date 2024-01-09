@@ -47,7 +47,7 @@ module.exports = {
       },
       animation: {
         pop: "pop 300ms ease-in-out",
-        dance: "dance 30s infinite",
+        dance: "dance 20s infinite",
       },
       gridTemplateColumns: {
         13: "repeat(13, minmax(0, 1fr))",
