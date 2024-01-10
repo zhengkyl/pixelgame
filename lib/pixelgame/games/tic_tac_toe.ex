@@ -201,19 +201,19 @@ defmodule Pixelgame.Games.TicTacToe do
     end
   end
 
-  @directions [{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}]
+  @directions [{1, 1}, {1, 0}, {1, -1}, {0, 1}]
 
   defp winning_tiles(%TicTacToe{pieces: pieces, win_length: win_length}, %Player{id: id}) do
     Enum.flat_map(@directions, fn {dx, dy} ->
       pieces[id]
       |> Enum.sort()
       |> Enum.reduce_while(%{}, fn {x, y}, acc ->
-        length = 1 + Map.get(acc, {x + dx, y + dy}, 0)
+        length = 1 + Map.get(acc, {x - dx, y - dy}, 0)
 
         case length do
           ^win_length ->
             {:halt,
-             0..(win_length - 1) |> Enum.map(fn dist -> {x + dist * dx, y + dist * dy} end)}
+             0..(win_length - 1) |> Enum.map(fn dist -> {x - dist * dx, y - dist * dy} end)}
 
           _ ->
             {:cont, Map.put(acc, {x, y}, length)}
@@ -229,10 +229,18 @@ defmodule Pixelgame.Games.TicTacToe do
   def next_turn(%TicTacToe{status: :playing, turn: turn, board_size: board_size} = state) do
     last_turn = board_size * board_size - 1
 
-    case turn do
-      ^last_turn -> %TicTacToe{state | status: :done}
-      _ -> %TicTacToe{state | turn: turn + 1}
-    end
+    state =
+      case turn do
+        ^last_turn -> %TicTacToe{state | status: :done}
+        _ -> %TicTacToe{state | turn: turn + 1}
+      end
+
+    sorted_players = Map.values(state.players) |> Enum.sort(fn p1, p2 -> p1.order < p2.order end)
+    player = Enum.at(sorted_players, rem(state.turn, map_size(state.players)))
+
+    IO.inspect(Pixelgame.Games.Bot.next_move(state, player.id), label: "#{player.name} should ")
+
+    state
   end
 
   def next_turn(%TicTacToe{status: :done} = state), do: state
