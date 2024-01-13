@@ -21,8 +21,12 @@ defmodule Pixelgame.Games.Bot do
         end)
       )
 
+    # IO.inspect(empty_set, label: "empty_set")
+
     Enum.reduce(@directions, %{}, fn {dx, dy}, acc ->
-      Enum.reduce(pieces, acc, fn {id, pieceSet}, acc ->
+      # IO.inspect("dir #{dx} #{dy}")
+
+      Enum.reduce(pieces, %{}, fn {id, pieceSet}, acc ->
         pieceSet
         |> Enum.sort()
         |> Enum.reduce(%{}, fn {x, y}, acc ->
@@ -39,13 +43,13 @@ defmodule Pixelgame.Games.Bot do
           |> Map.update(preCoords, len + 1, fn curr_value ->
             len + curr_value
           end)
-          |> Map.put(preCoords, len + 1)
           |> Map.put(postCoords, len + 1)
         end)
+        # |> IO.inspect(label: "unfiltered")
         |> Enum.filter(fn {{x, y}, _value} ->
           x >= 0 && x <= n && y >= 0 && y <= n && MapSet.member?(empty_set, {x, y})
         end)
-        |> Enum.sort(fn {_, v1}, {_, v2} -> v1 >= v2 end)
+        # |> IO.inspect(label: "filter")
         |> Enum.map(fn {{x, y}, value} ->
           value =
             case value do
@@ -98,10 +102,13 @@ defmodule Pixelgame.Games.Bot do
 
           {{x, y}, value}
         end)
+        # |> IO.inspect(label: "revalued")
         |> Map.new()
         |> Map.merge(acc, fn _coord, v1, v2 ->
           v1 + v2
         end)
+
+        # |> IO.inspect(label: "merge 1")
 
         # map with coords, value = sum of each player value in this direction
       end)
@@ -109,8 +116,13 @@ defmodule Pixelgame.Games.Bot do
         v1 + v2
       end)
 
+      # |> IO.inspect(label: "merge 2")
+
       # map with coords, value = sum of each player value in ALL directions
     end)
     |> Enum.sort(fn {_, v1}, {_, v2} -> v1 >= v2 end)
+    # |> IO.inspect(label: "filter")
+    |> Enum.at(0)
+    |> elem(0)
   end
 end

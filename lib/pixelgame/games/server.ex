@@ -3,6 +3,7 @@ defmodule Pixelgame.Games.Server do
 
   require Logger
 
+  alias Pixelgame.Games.Bot
   alias Pixelgame.Games.TicTacToe
   alias __MODULE__
 
@@ -147,9 +148,7 @@ defmodule Pixelgame.Games.Server do
   end
 
   def handle_call({:make_move, player_id, move}, _from, %TicTacToe{} = state) do
-    with {:ok, player} <- TicTacToe.find_player(state, player_id),
-         {:ok, state} <- TicTacToe.move(state, player, move) do
-      broadcast_game_state(state)
+    with {:ok, state} <- try_move(state, player_id, move) do
       {:reply, :ok, state}
     else
       {:error, reason} = error ->
@@ -175,6 +174,17 @@ defmodule Pixelgame.Games.Server do
     end
   end
 
+  def handle_info({:bot_move, bot_id}, %TicTacToe{} = state) do
+    case try_move(state, bot_id, Bot.next_move(state, bot_id)) do
+      {:ok, state} ->
+        {:noreply, state}
+
+      {:error, reason} ->
+        Logger.error("Failed to move in game_#{state.code}: #{inspect(reason)}")
+        {:noreply, state}
+    end
+  end
+
   def handle_info(:end_turn, %TicTacToe{} = state) do
     state = TicTacToe.next_turn(state) |> TicTacToe.reset_timer()
     broadcast_game_state(state)
@@ -188,6 +198,14 @@ defmodule Pixelgame.Games.Server do
     PubSub.broadcast(Pixelgame.PubSub, "game:#{state.code}", :timeout)
 
     {:stop, :normal, state}
+  end
+
+  defp try_move(%TicTacToe{} = state, player_id, move) do
+    with {:ok, player} <- TicTacToe.find_player(state, player_id),
+         {:ok, state} <- TicTacToe.move(state, player, move) do
+      broadcast_game_state(state)
+      {:ok, state}
+    end
   end
 
   defp try_ready_and_next(%TicTacToe{} = state, player, ready) when player.ready == ready,

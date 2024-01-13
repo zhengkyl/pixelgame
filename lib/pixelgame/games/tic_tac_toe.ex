@@ -30,7 +30,7 @@ defmodule Pixelgame.Games.TicTacToe do
   # 15 minute timeout while not :playing
   @timeout_time 1000 * 60 * 15
   # 30 sec turn time while :playing
-  @turn_time 1000 * 30
+  @turn_time 1000 * 3000
 
   def new(code, player, board_size \\ 3, win_length \\ 3) do
     %TicTacToe{
@@ -48,7 +48,7 @@ defmodule Pixelgame.Games.TicTacToe do
       state
       | status: :waiting,
         turn: 0,
-        players: Map.new(state.players, fn {id, p} -> {id, %Player{p | ready: false}} end),
+        players: Map.new(state.players, fn {id, p} -> {id, %Player{p | ready: p.bot}} end),
         pieces: Map.new(Map.keys(state.players), fn id -> {id, MapSet.new()} end)
     }
     |> reset_timer()
@@ -76,6 +76,16 @@ defmodule Pixelgame.Games.TicTacToe do
             Map.values(players) |> Enum.all?(fn player -> player.shape != shape end)
           end)
 
+        color =
+          if new_player.bot do
+            Player.colors()
+            |> Enum.find("#ffffff", fn color ->
+              Map.values(players) |> Enum.all?(fn player -> player.color != color end)
+            end)
+          else
+            "#ffffff"
+          end
+
         {:ok,
          %TicTacToe{
            state
@@ -84,7 +94,9 @@ defmodule Pixelgame.Games.TicTacToe do
                  new_player
                  | # store join order before randomized in start
                    order: map_size(players),
-                   shape: shape
+                   shape: shape,
+                   color: color,
+                   ready: new_player.bot
                }),
              pieces: Map.put(pieces, new_player.id, MapSet.new())
          }
@@ -109,7 +121,8 @@ defmodule Pixelgame.Games.TicTacToe do
      %TicTacToe{
        state
        | players: %{state.players | player.id => %Player{player | ready: ready}}
-     }}
+     }
+     |> reset_timer()}
   end
 
   def ready(%TicTacToe{status: status}, %Player{}), do: {:error, "Can't ready #{status} game"}
@@ -123,7 +136,10 @@ defmodule Pixelgame.Games.TicTacToe do
           |> Enum.zip(Enum.shuffle(0..(map_size(players) - 1)))
           |> Map.new(fn {{id, player}, order} -> {id, %Player{player | order: order}} end)
 
-        {:ok, %TicTacToe{state | status: :playing, players: players} |> reset_timer()}
+        {:ok,
+         %TicTacToe{state | status: :playing, players: players}
+         |> maybe_bot_move()
+         |> reset_timer()}
 
       false ->
         {:error, "Not all players ready to start game"}
@@ -193,7 +209,8 @@ defmodule Pixelgame.Games.TicTacToe do
         %TicTacToe{
           state
           | status: :done,
-            pieces: Map.put(state.pieces, :win, MapSet.new(winning_tiles))
+            pieces: Map.put(state.pieces, :win, MapSet.new(winning_tiles)),
+            players: Map.new(state.players, fn {id, p} -> {id, %Player{p | ready: !p.bot}} end)
         }
 
       [] ->
@@ -229,21 +246,33 @@ defmodule Pixelgame.Games.TicTacToe do
   def next_turn(%TicTacToe{status: :playing, turn: turn, board_size: board_size} = state) do
     last_turn = board_size * board_size - 1
 
-    state =
-      case turn do
-        ^last_turn -> %TicTacToe{state | status: :done}
-        _ -> %TicTacToe{state | turn: turn + 1}
-      end
+    case turn do
+      ^last_turn ->
+        %TicTacToe{
+          state
+          | status: :done,
+            players: Map.new(state.players, fn {id, p} -> {id, %Player{p | ready: !p.bot}} end)
+        }
 
-    sorted_players = Map.values(state.players) |> Enum.sort(fn p1, p2 -> p1.order < p2.order end)
-    player = Enum.at(sorted_players, rem(state.turn, map_size(state.players)))
-
-    IO.inspect(Pixelgame.Games.Bot.next_move(state, player.id), label: "#{player.name} should ")
-
-    state
+      _ ->
+        %TicTacToe{state | turn: turn + 1} |> maybe_bot_move()
+    end
   end
 
   def next_turn(%TicTacToe{status: :done} = state), do: state
+
+  defp maybe_bot_move(%TicTacToe{} = state) do
+    next_player =
+      Enum.find(Map.values(state.players), fn player ->
+        player.order == rem(state.turn, map_size(state.players))
+      end)
+
+    if next_player.bot do
+      Process.send_after(self(), {:bot_move, next_player.id}, 1000 * 1)
+    end
+
+    state
+  end
 
   def find_player(%TicTacToe{players: players}, player_id) do
     case Map.fetch(players, player_id) do

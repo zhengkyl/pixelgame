@@ -5,8 +5,10 @@ defmodule Pixelgame.Games.Player do
   alias __MODULE__
 
   @shapes [:cross, :circle, :square, :triangle]
+  @colors ["#ff595e", "#ffca3a", "#8ac926", "#1982c4", "#6a4c93", "#ff70a6", "#ffffff"]
 
   def shapes(), do: @shapes
+  def colors(), do: @colors
 
   @primary_key {:id, :id, []}
   embedded_schema do
@@ -15,11 +17,12 @@ defmodule Pixelgame.Games.Player do
     field :shape, Ecto.Enum, values: @shapes, default: :cross
     field :color, :string, default: "#ffffff"
     field :ready, :boolean, default: false
+    field :bot, :boolean, default: false
   end
 
   def changeset(player, attrs) do
     player
-    |> cast(attrs, [:name, :id, :shape, :color])
+    |> cast(attrs, [:name, :id, :shape, :color, :bot])
     |> validate_required([:name, :id])
     |> validate_format(:color, ~r/(#[a-f\d]{6})|(none)/)
   end

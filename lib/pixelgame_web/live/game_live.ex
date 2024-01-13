@@ -152,6 +152,38 @@ defmodule PixelgameWeb.GameLive do
     {:noreply, socket}
   end
 
+  def handle_event("add_bot", _params, socket) do
+    %{client_info: %{code: code}} = socket.assigns
+
+    with {:ok, player} <-
+           Games.Player.create(%{
+             name: "(bot) " <> Pixelgame.NameGenerator.generate_name(),
+             id: -:rand.uniform(1_000_000_000),
+             bot: true
+           }),
+         :ok <- Games.Server.join_game(code, player) do
+      {:noreply, socket}
+    else
+      {:error, reason} -> {:noreply, socket |> put_flash(:error, reason)}
+    end
+  end
+
+  def handle_event("remove_bot", %{"id" => id}, socket) do
+    %{client_info: %{code: code}, game: game} = socket.assigns
+
+    bot_id = String.to_integer(id)
+
+    with {:ok, bot} <- Map.fetch(game.players, bot_id),
+         true <- bot.bot,
+         :ok <- Games.Server.leave_game(code, bot_id) do
+      {:noreply, socket}
+    else
+      x ->
+        IO.inspect(x)
+        {:noreply, socket |> put_flash(:error, "Failed to kick bot.")}
+    end
+  end
+
   def handle_event("toggle_ready", _params, socket) do
     %{client_info: %{code: code, id: id}, game: %{players: players}} = socket.assigns
 
@@ -463,7 +495,7 @@ defmodule PixelgameWeb.GameLive do
                   <.player_tile player={shapeP} class="w-full" />
                 </.button>
               <% end %>
-              <%= for color <- ["#ff595e", "#ffca3a","#8ac926", "#1982c4","#6a4c93"  ,"#ff70a6" ,"#ffffff", "none" ] do %>
+              <%= for color <- Games.Player.colors() ++ ["none"] do %>
                 <.button
                   bare
                   class={
@@ -484,17 +516,10 @@ defmodule PixelgameWeb.GameLive do
           </div>
           <div class="[flex:3] min-w-[200px] flex flex-col gap-4">
             <div
-              :if={map_size(@game.players) == 1}
-              class="rounded-lg p-4 border text-center text-bold"
-            >
-              <div class="font-black">Not enough players</div>
-              Invite players to start a game
-            </div>
-            <div
               :for={player <- @sorted_players}
               :if={player.id != @client_info.id}
               class={[
-                "rounded-lg p-4 flex justify-between border",
+                "relative rounded-lg p-4 flex justify-between border",
                 player.id == @client_info.id && "outline"
               ]}
             >
@@ -508,8 +533,27 @@ defmodule PixelgameWeb.GameLive do
                 ]}>
                   <%= if player.ready, do: "READY", else: "NOT READY" %>
                 </div>
+                <.button
+                  :if={player.bot}
+                  bare
+                  class="absolute top-0 right-0 translate-x-1/3 -translate-y-1/3"
+                  phx-click="remove_bot"
+                  phx-value-id={player.id}
+                >
+                  <.icon name="hero-x-mark-mini" class="text-red-400 h-6 w-6 block" />
+                </.button>
               </div>
               <.player_tile player={player} class="w-11" />
+            </div>
+            <.button :if={map_size(@game.players) < @game.max_players} phx-click="add_bot">
+              Add bot
+            </.button>
+            <div
+              :if={map_size(@game.players) < @game.min_players}
+              class="rounded-lg p-4 border text-center text-bold"
+            >
+              <div class="font-black">Not enough players</div>
+              Add players to start a game
             </div>
           </div>
         </div>
