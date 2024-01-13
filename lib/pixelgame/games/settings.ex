@@ -25,8 +25,8 @@ defmodule Pixelgame.Games.Settings do
       settings
       |> cast(attrs, [:board_size, :win_length])
 
-    board_size = get_field(changeset, :board_size)
-    win_length = get_field(changeset, :win_length)
+    board_size = get_field(changeset, :board_size) || changeset.data.board_size
+    win_length = get_field(changeset, :win_length) || changeset.data.win_length
 
     preset =
       preset(%{
