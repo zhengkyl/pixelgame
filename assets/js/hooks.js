@@ -121,7 +121,7 @@ export const Announcement = {
         setTimeout(() => {
           this.el.style = "";
         }, 5000);
-      }, 500);
+      }, 1000);
     });
   },
 };

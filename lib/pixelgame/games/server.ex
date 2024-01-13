@@ -94,6 +94,7 @@ defmodule Pixelgame.Games.Server do
 
       {:ok, state} ->
         broadcast_game_state(state)
+        if player.bot, do: try_next(state)
         {:reply, :ok, state}
 
       {:error, reason} = error ->

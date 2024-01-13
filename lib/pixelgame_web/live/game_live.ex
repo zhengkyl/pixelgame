@@ -576,7 +576,7 @@ defmodule PixelgameWeb.GameLive do
       <div :if={@game.status !== :waiting} class="flex flex-col gap-4">
         <div
           id="announcement"
-          class="hidden bg-black/80 fixed left-0 right-0 top-1/3 p-16 transition-opacity ease-in z-10 text-5xl font-black text-center duration-[3s] animate-pop"
+          class="hidden bg-black/80 fixed left-0 right-0 top-1/3 p-16 transition-opacity ease-in z-20 text-5xl font-black text-center duration-[3s] animate-pop"
           phx-hook="Announcement"
         >
         </div>
@@ -598,6 +598,22 @@ defmodule PixelgameWeb.GameLive do
           <div id="timer" class="text-xl flex-1 text-right" phx-hook="Timer"></div>
         </div>
         <div class="relative">
+          <svg
+            :if={Map.has_key?(@game.pieces, :win)}
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox={"0 0 #{@game.board_size} #{@game.board_size}"}
+            class="absolute animate-draw z-10"
+          >
+            <path
+              d={"M #{@game.pieces[:win] |>MapSet.to_list() |> List.first() |> then(fn {y, x} ->
+                  "#{x - 0.5} #{y - 0.5}"
+                end)} #{@game.pieces[:win] |> MapSet.to_list() |> List.last() |> then(fn {y, x} ->
+                  "#{x - 0.5} #{y - 0.5}"
+                end)}"}
+              style="stroke-width:0.4;stroke-linecap:round"
+              class="stroke-brand"
+            />
+          </svg>
           <div
             id="game_grid"
             class={"grid grid-cols-#{@game.board_size} gap-1"}
@@ -610,7 +626,7 @@ defmodule PixelgameWeb.GameLive do
                     "border rounded aspect-square",
                     "cursor-pointer",
                     Map.has_key?(@game.pieces, :win) && MapSet.member?(@game.pieces[:win], {x, y}) &&
-                      "bg-amber-600"
+                      "outline outline-6 outline-amber-500"
                   ]}
                   phx-click="move"
                   phx-value-row={x}
@@ -618,11 +634,17 @@ defmodule PixelgameWeb.GameLive do
                 >
                   <%= case Enum.find(@game.players, fn {id, _} -> MapSet.member?(@game.pieces[id], {x, y}) end) do %>
                     <% {_, player} -> %>
+                      <%!-- Remove class b/c this rerenders for some unknown reason --%>
                       <.player_tile
                         player={player}
                         id={"game_tile_#{x}_#{y}"}
                         phx-hook="GameTile"
-                        class="animate-pop"
+                        class={[
+                          @game.status == :playing && "animate-pop",
+                          Map.has_key?(@game.pieces, :win) &&
+                            MapSet.member?(@game.pieces[:win], {x, y}) &&
+                            "[--pop-index:#{MapSet.to_list(@game.pieces[:win]) |> Enum.find_index(&(&1 == {x, y}))}] animate-delayedPop"
+                        ]}
                       />
                     <% nil -> %>
                       <.player_tile

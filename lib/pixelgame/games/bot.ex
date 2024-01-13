@@ -33,16 +33,16 @@ defmodule Pixelgame.Games.Bot do
           len = Map.get(acc, {x, y}, 1)
 
           preCoords = {x - len * dx, y - len * dy}
+          prePreCoords = {x - (len + 1) * dx, y - (len + 1) * dy}
+
           postCoords = {x + dx, y + dy}
 
           acc
           # start at one, but keep value set by postCoords
           |> Map.put_new({x, y}, 1)
 
-          # if preCoord was a postCoord, combine two lines
-          |> Map.update(preCoords, len + 1, fn curr_value ->
-            len + curr_value
-          end)
+          # if preCoord can combine two lines
+          |> Map.put(preCoords, len + Map.get(acc, prePreCoords, 0) + 1)
           |> Map.put(postCoords, len + 1)
         end)
         # |> IO.inspect(label: "unfiltered")

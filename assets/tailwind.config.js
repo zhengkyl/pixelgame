@@ -9,6 +9,26 @@ module.exports = {
   content: ["./js/**/*.js", "../lib/*_web.ex", "../lib/*_web/**/*.*ex"],
   safelist: [
     "text-green-600",
+    "[--pop-index:0]",
+    "[--pop-index:1]",
+    "[--pop-index:2]",
+    "[--pop-index:3]",
+    "[--pop-index:4]",
+    "[--pop-index:5]",
+    "[--pop-index:6]",
+    "[--pop-index:7]",
+    "[--pop-index:8]",
+    "[--pop-index:9]",
+    "[--pop-index:10]",
+    "[--pop-index:11]",
+    "[--pop-index:12]",
+    "[--pop-index:13]",
+    "[--pop-index:14]",
+    "[--pop-index:15]",
+    "[--pop-index:16]",
+    "[--pop-index:17]",
+    "[--pop-index:18]",
+    "[--pop-index:19]",
     {
       pattern: /bg-(green|sky|purple|yellow|amber)-600/,
     },
@@ -32,8 +52,17 @@ module.exports = {
         brand: "#FAD63F",
       },
       keyframes: {
+        draw: {
+          "0%": { strokeDashoffset: 30, strokeDasharray: "20 40" },
+          "100%": { strokeDashoffset: 0 },
+        },
         pop: {
           "0%": { transform: "scale(0)" },
+          "60%": { transform: "scale(1.2)" },
+          "100%": { transform: "scale(1)" },
+        },
+        delayedPop: {
+          "0%": { transform: "scale(1)" },
           "60%": { transform: "scale(1.2)" },
           "100%": { transform: "scale(1)" },
         },
@@ -47,7 +76,10 @@ module.exports = {
       },
       animation: {
         pop: "pop 300ms ease-in-out",
+        delayedPop:
+          "delayedPop 300ms ease-in-out calc(var(--pop-index) * 100ms)",
         dance: "dance 20s infinite",
+        draw: "draw 4s",
       },
       gridTemplateColumns: {
         13: "repeat(13, minmax(0, 1fr))",
