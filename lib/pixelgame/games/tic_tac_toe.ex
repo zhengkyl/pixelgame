@@ -36,7 +36,9 @@ defmodule Pixelgame.Games.TicTacToe do
     %TicTacToe{
       code: code,
       players: %{player.id => player},
-      pieces: %{player.id => MapSet.new()},
+      pieces: %{
+        player.id => MapSet.new()
+      },
       board_size: board_size,
       win_length: win_length
     }
@@ -137,7 +139,21 @@ defmodule Pixelgame.Games.TicTacToe do
           |> Map.new(fn {{id, player}, order} -> {id, %Player{player | order: order}} end)
 
         {:ok,
-         %TicTacToe{state | status: :playing, players: players}
+         %TicTacToe{
+           state
+           | status: :playing,
+             players: players,
+             pieces:
+               Map.put(
+                 state.pieces,
+                 :empty,
+                 MapSet.new(
+                   for x <- 1..state.board_size,
+                       y <- 1..state.board_size,
+                       do: {x, y}
+                 )
+               )
+         }
          |> maybe_bot_move()
          |> reset_timer()}
 
@@ -156,7 +172,11 @@ defmodule Pixelgame.Games.TicTacToe do
       {:ok,
        %TicTacToe{
          state
-         | pieces: %{pieces | player.id => pieces[player.id] |> MapSet.put(move)}
+         | pieces: %{
+             pieces
+             | player.id => pieces[player.id] |> MapSet.put(move),
+               empty: pieces.empty |> MapSet.delete(move)
+           }
        }
        |> check_win(player)
        |> next_turn()
@@ -196,10 +216,10 @@ defmodule Pixelgame.Games.TicTacToe do
   end
 
   defp verify_valid_move(%TicTacToe{pieces: pieces}, move) do
-    if Map.values(pieces) |> Enum.any?(fn v -> MapSet.member?(v, move) end) do
-      {:error, "Move already taken"}
-    else
+    if MapSet.member?(pieces.empty, move) do
       :ok
+    else
+      {:error, "Move already taken"}
     end
   end
 

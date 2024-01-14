@@ -2,27 +2,114 @@ defmodule Pixelgame.Games.Bot do
   alias Pixelgame.Games.TicTacToe
 
   @directions [{1, 1}, {1, 0}, {1, -1}, {0, 1}]
+
+  @empty_set MapSet.new()
+  # We bound minimax values to [-10, 10]
+  @neg_infinity -11
+  @pos_infinity 11
+  defp minimax(%TicTacToe{pieces: %{empty: set}}, _is_min) when set == @empty_set,
+    do: 0
+
+  defp minimax(%TicTacToe{pieces: pieces} = state, is_min) do
+    order = rem(state.turn + ((is_min && 1) || 0), 2)
+    player = Enum.find(state.players, fn player -> player.order == order end)
+
+    if is_min do
+      Enum.reduce(pieces.empty, @pos_infinity, fn coord, acc ->
+        value =
+          if winning_move?(state, player.id, coord) do
+            -10
+          else
+            minimax(move(state, player.id, coord), false)
+          end
+
+        min(acc, value)
+      end)
+    else
+      Enum.reduce(pieces.empty, @neg_infinity, fn coord, acc ->
+        value =
+          if winning_move?(state, player.id, coord) do
+            10
+          else
+            minimax(move(state, player.id, coord), true)
+          end
+
+        max(acc, value)
+      end)
+    end
+  end
+
+  defp move(%TicTacToe{} = state, id, move) do
+    %TicTacToe{
+      state
+      | pieces: %{
+          state.pieces
+          | id => state.pieces[id] |> MapSet.put(move),
+            empty: state.pieces.empty |> MapSet.delete(move)
+        }
+    }
+  end
+
+  defp winning_move?(%TicTacToe{pieces: pieces, board_size: n, win_length: k}, id, {x, y}) do
+    Enum.any?(@directions, fn {dx, dy} ->
+      {front, back} =
+        case dx == 0 do
+          true -> {-1..(1 - y)//-1, 1..(n - y)//1}
+          false -> {-1..(1 - x)//-1, 1..(n - x)//1}
+        end
+
+      front_len =
+        Enum.count_until(
+          front,
+          fn dist ->
+            coord = {x + dist * dx, y + dist * dy}
+            not MapSet.member?(pieces[id], coord)
+          end,
+          1000
+        )
+
+      back_len =
+        Enum.count_until(
+          back,
+          fn dist ->
+            coord = {x + dist * dx, y + dist * dy}
+            not MapSet.member?(pieces[id], coord)
+          end,
+          1000
+        )
+
+      front_len + 1 + back_len >= k
+    end)
+  end
+
+  def next_move(%TicTacToe{pieces: pieces, players: players, board_size: n} = state, _player_id)
+      when map_size(players) == 2 and n < 5 do
+    Enum.reduce(pieces.empty, {{-1, -1}, @neg_infinity}, fn coord, acc ->
+      v = minimax(state, false)
+
+      if v > elem(acc, 1) do
+        {coord, v}
+      else
+        acc
+      end
+    end)
+    |> elem(0)
+  end
+
+  # Minimax is for 2 players and max^n is hard to implement.
+  # Specifically, max^n isn't prunable and requires a good heuristic for positional value
+  #
+  # The simple next-best-move heuristic below only considers moves adjacent to an existing piece
+  # and prioritizes
+  # - winning
+  # - blocking an immediate win
+  # - long chains with enough space to win
+  # in that order. It easily loses to 2 step setups, but for > 3 players, this isn't obvious.
   def next_move(%TicTacToe{turn: 0, board_size: n}, _player_id) do
     {:rand.uniform(n), :rand.uniform(n)}
   end
 
   def next_move(%TicTacToe{pieces: pieces, board_size: n, win_length: k}, player_id) do
-    all_coords = for x <- 1..n, y <- 1..n, do: {x, y}
-
-    empty_set =
-      MapSet.new(
-        all_coords
-        |> Enum.reject(fn {x, y} ->
-          pieces
-          |> Map.values()
-          |> Enum.any?(fn pieceSet ->
-            MapSet.member?(pieceSet, {x, y})
-          end)
-        end)
-      )
-
-    # IO.inspect(empty_set, label: "empty_set")
-
     Enum.reduce(@directions, %{}, fn {dx, dy}, acc ->
       # IO.inspect("dir #{dx} #{dy}")
 
@@ -47,7 +134,7 @@ defmodule Pixelgame.Games.Bot do
         end)
         # |> IO.inspect(label: "unfiltered")
         |> Enum.filter(fn {{x, y}, _value} ->
-          x >= 0 && x <= n && y >= 0 && y <= n && MapSet.member?(empty_set, {x, y})
+          x >= 0 && x <= n && y >= 0 && y <= n && MapSet.member?(pieces.empty, {x, y})
         end)
         # |> IO.inspect(label: "filter")
         |> Enum.map(fn {{x, y}, value} ->
@@ -64,34 +151,34 @@ defmodule Pixelgame.Games.Bot do
               # only value tiles with enough space to win
               v ->
                 {front, back} =
-                  case dy == 0 do
+                  case dx == 0 do
                     true -> {-1..(1 - y)//-1, 1..(n - y)//1}
                     false -> {-1..(1 - x)//-1, 1..(n - x)//1}
                   end
 
                 front_len =
-                  Enum.reduce_while(front, 0, fn dist, acc ->
-                    coord = {x + dist * dx, y + dist * dy}
+                  Enum.count_until(
+                    front,
+                    fn dist ->
+                      coord = {x + dist * dx, y + dist * dy}
 
-                    if MapSet.member?(empty_set, coord) or
-                         MapSet.member?(pieces[player_id], coord) do
-                      {:cont, acc + 1}
-                    else
-                      {:halt, acc}
-                    end
-                  end)
+                      not (MapSet.member?(pieces.empty, coord) or
+                             MapSet.member?(pieces[player_id], coord))
+                    end,
+                    1000
+                  )
 
                 back_len =
-                  Enum.reduce_while(back, 0, fn dist, acc ->
-                    coord = {x + dist * dx, y + dist * dy}
+                  Enum.count_until(
+                    back,
+                    fn dist ->
+                      coord = {x + dist * dx, y + dist * dy}
 
-                    if MapSet.member?(empty_set, coord) or
-                         MapSet.member?(pieces[player_id], coord) do
-                      {:cont, acc + 1}
-                    else
-                      {:halt, acc}
-                    end
-                  end)
+                      not (MapSet.member?(pieces.empty, coord) or
+                             MapSet.member?(pieces[player_id], coord))
+                    end,
+                    1000
+                  )
 
                 if front_len + 1 + back_len >= k do
                   v

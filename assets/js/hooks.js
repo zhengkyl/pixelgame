@@ -69,59 +69,62 @@ export const Announcement = {
   mounted() {
     this.handleEvent("announce", ({ msg, win }) => {
       // gross but delay feels better
-      setTimeout(() => {
-        const audio = new Audio(
-          win ? "/sounds/victory.ogg" : "/sounds/defeat.ogg"
-        );
-        audio.play();
+      setTimeout(
+        () => {
+          const audio = new Audio(
+            win ? "/sounds/victory.ogg" : "/sounds/defeat.ogg"
+          );
+          audio.play();
 
-        if (win) {
-          const end = Date.now() + 3000;
-          const frame = () => {
+          if (win) {
+            const end = Date.now() + 3000;
+            const frame = () => {
+              confetti({
+                particleCount: 2,
+                angle: 60,
+                origin: { x: 0, y: 0.7 },
+              });
+              confetti({
+                particleCount: 2,
+                angle: 120,
+                origin: { x: 1, y: 0.7 },
+              });
+              confetti({
+                particleCount: 2,
+                origin: { y: 1, x: 0.75 },
+              });
+              confetti({
+                particleCount: 2,
+                origin: { y: 1, x: 0.25 },
+              });
+              if (Date.now() < end) requestAnimationFrame(frame);
+            };
+            frame();
+          } else {
             confetti({
-              particleCount: 2,
-              angle: 60,
-              origin: { x: 0, y: 0.7 },
+              particleCount: 20,
+              colors: ["#c7c7c7"],
+              angle: 45,
+              origin: { x: 0 },
             });
             confetti({
-              particleCount: 2,
-              angle: 120,
-              origin: { x: 1, y: 0.7 },
+              particleCount: 20,
+              colors: ["#c7c7c7"],
+              angle: 135,
+              origin: { x: 1 },
             });
-            confetti({
-              particleCount: 2,
-              origin: { y: 1, x: 0.75 },
-            });
-            confetti({
-              particleCount: 2,
-              origin: { y: 1, x: 0.25 },
-            });
-            if (Date.now() < end) requestAnimationFrame(frame);
-          };
-          frame();
-        } else {
-          confetti({
-            particleCount: 20,
-            colors: ["#c7c7c7"],
-            angle: 45,
-            origin: { x: 0 },
-          });
-          confetti({
-            particleCount: 20,
-            colors: ["#c7c7c7"],
-            angle: 135,
-            origin: { x: 1 },
-          });
-        }
+          }
 
-        this.el.textContent = msg;
-        this.el.style.display = "block";
-        this.el.offsetHeight; // trigger reflow -> transition runs
-        this.el.style.opacity = 0;
-        setTimeout(() => {
-          this.el.style = "";
-        }, 5000);
-      }, 1000);
+          this.el.textContent = msg;
+          this.el.style.display = "block";
+          this.el.offsetHeight; // trigger reflow -> transition runs
+          this.el.style.opacity = 0;
+          setTimeout(() => {
+            this.el.style = "";
+          }, 5000);
+        },
+        win ? 1000 : 500
+      );
     });
   },
 };
