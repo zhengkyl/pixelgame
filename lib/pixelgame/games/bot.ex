@@ -3,56 +3,54 @@ defmodule Pixelgame.Games.Bot do
 
   @directions [{1, 1}, {1, 0}, {1, -1}, {0, 1}]
 
-  @empty_set MapSet.new()
   # We bound minimax values to [-10, 10]
   @neg_infinity -11
   @pos_infinity 11
 
-  defp minimax(%TicTacToe{pieces: %{empty: set}}, _is_min, _alpha, _beta) when set == @empty_set,
-    do: 0
+  defp minimax(%TicTacToe{} = state, move, is_min, alpha, beta) do
+    order = rem(state.turn + if(is_min, do: 0, else: 1), 2)
+    previous = Map.values(state.players) |> Enum.find(fn player -> player.order == order end)
 
-  defp minimax(%TicTacToe{pieces: pieces} = state, is_min, alpha, beta) do
-    order = rem(state.turn + if(is_min, do: 1, else: 0), 2)
-    player = Enum.find(Map.values(state.players), fn player -> player.order == order end)
-
-    if is_min do
-      Enum.reduce_while(pieces.empty, {@pos_infinity, beta}, fn coord, {min, beta} ->
-        value =
-          if winning_move?(state, player.id, coord) do
-            -10
-          else
-            minimax(move(state, player.id, coord), false, alpha, beta)
-          end
-
-        min = min(min, value)
-        beta = min(beta, value)
-
-        if beta <= alpha do
-          {:halt, {min, beta}}
-        else
-          {:cont, {min, beta}}
-        end
-      end)
+    if winning_move?(state, previous.id, move) do
+      # previous players move, so opposite of is_min
+      depth = 9 - MapSet.size(state.pieces.empty)
+      if is_min, do: 10 - depth, else: -10 + depth
     else
-      Enum.reduce_while(pieces.empty, {@neg_infinity, alpha}, fn coord, {max, alpha} ->
-        value =
-          if winning_move?(state, player.id, coord) do
-            10
-          else
-            minimax(move(state, player.id, coord), true, alpha, beta)
-          end
+      state = move(state, previous.id, move)
 
-        max = max(max, value)
-        alpha = max(max, value)
+      if MapSet.size(state.pieces.empty) == 0 do
+        0
+      else
+        if is_min do
+          Enum.reduce_while(state.pieces.empty, {@pos_infinity, beta}, fn coord, {min, beta} ->
+            value = minimax(state, coord, false, alpha, beta)
 
-        if beta <= alpha do
-          {:halt, {max, alpha}}
+            min = min(min, value)
+            beta = min(beta, value)
+
+            if beta <= alpha do
+              {:halt, {min, beta}}
+            else
+              {:cont, {min, beta}}
+            end
+          end)
         else
-          {:cont, {max, alpha}}
+          Enum.reduce_while(state.pieces.empty, {@neg_infinity, alpha}, fn coord, {max, alpha} ->
+            value = minimax(state, coord, true, alpha, beta)
+
+            max = max(max, value)
+            alpha = max(max, value)
+
+            if beta <= alpha do
+              {:halt, {max, alpha}}
+            else
+              {:cont, {max, alpha}}
+            end
+          end)
         end
-      end)
+        |> elem(0)
+      end
     end
-    |> elem(0)
   end
 
   defp move(%TicTacToe{} = state, id, move) do
@@ -107,22 +105,21 @@ defmodule Pixelgame.Games.Bot do
   # That only works for 2 players + good heuristic is non trivial + choose slow or shallow depth
   # See heuristic-based next_move() below which is ok for 3+ players on arbitrary boards size
   # for potential direction for a board state heuristic
-  def next_move(%TicTacToe{pieces: pieces, players: players, board_size: n} = state, player_id)
+  def next_move(%TicTacToe{pieces: pieces, players: players, board_size: n} = state, _player_id)
       when map_size(players) == 2 and n == 3 do
-    Enum.reduce_while(pieces.empty, {{-1, -1}, @neg_infinity}, fn coord, acc ->
-      if winning_move?(state, player_id, coord) do
-        {:halt, {coord, 10}}
-      else
-        v = minimax(move(state, player_id, coord), true, @neg_infinity, @pos_infinity)
-
-        if v > elem(acc, 1) do
-          {:cont, {coord, v}}
-        else
-          {:cont, acc}
-        end
+    Enum.map(pieces.empty, fn coord ->
+      v = minimax(state, coord, true, @neg_infinity, @pos_infinity)
+      {coord, v}
+    end)
+    |> Enum.reduce({[], -1000}, fn {coord, v}, {coords, max_v} = acc ->
+      case v do
+        v when v > max_v -> {[coord], v}
+        v when v == max_v -> {[coord | coords], v}
+        _ -> acc
       end
     end)
     |> elem(0)
+    |> Enum.random()
   end
 
   # Minimax is for 2 players and max^n is hard to implement.
