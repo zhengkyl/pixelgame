@@ -2,9 +2,19 @@
 
 Online [m,n,k game](https://en.wikipedia.org/wiki/M,n,k-game), but for m == n <= 20
 
-Demo at [pixelgame.fly.dev](https://pixelgame.fly.dev)
-
 Inspired by https://github.com/fly-apps/tictac
+
+## AAAA Gameplay!
+
+![gameplay](./demo/playing.gif)
+
+## New shapes, colors, and ruthless AI!
+
+![multiplayer with bots](./demo/lobby.jpg)
+
+## Play classics or make your own rules!
+
+![customizable rules](./demo/settings.jpg)
 
 ## Development
 
